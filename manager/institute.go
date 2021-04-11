@@ -71,7 +71,7 @@ func (InstituteManager) Update(DB db.Env, objs []db.Object) error {
 			errors <- DB.Update(obj.Data, obj.Collection)
 		}(o, &wg)
 
-		log.Printf("inserting %v into %v\n", o.Doc, o.Collection)
+		log.Printf("updating %v in %v\n", o.Doc, o.Collection)
 	}
 
 	wg.Wait()
