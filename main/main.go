@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-scraper/manager"
 	"log"
 	"os"
+
+	"github.com/Projeto-USPY/uspy-backend/db"
+	"github.com/Projeto-USPY/uspy-scraper/manager"
 )
 
 var (
@@ -20,7 +21,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	env := db.SetupDB(".env")
+	env := db.SetupDB()
 
 	log.Printf("Running %s in %s\n", method, mode)
 	for name, obj := range manager.Managers {
