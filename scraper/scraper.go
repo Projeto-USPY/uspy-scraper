@@ -1,22 +1,11 @@
 package scraper
 
 import (
-	"errors"
-	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-scraper/utils"
 	"io"
 	"net/http"
-)
 
-var (
-	DefaultInstituteURLMask = "https://uspdigital.usp.br/jupiterweb/jupCursoLista?codcg=%s&tipo=N"
-	DefaultCourseURLMask    = "https://uspdigital.usp.br/jupiterweb/listarGradeCurricular?codcg=%s&codcur=%s&codhab=%s&tipo=N"
-	DefaultSubjectURLMask   = "https://uspdigital.usp.br/jupiterweb/obterDisciplina?sgldis=%s&codcur=%s&codhab=%s"
-)
-
-var (
-	ErrorCourseNotExist   = errors.New("could not fetch course in institute page")
-	ErrorCourseNoSubjects = errors.New("could not fetch subjects in course page")
+	"github.com/Projeto-USPY/uspy-backend/db"
+	"github.com/Projeto-USPY/uspy-scraper/utils"
 )
 
 type Starter interface {
@@ -28,14 +17,14 @@ type Scraper interface {
 	Scrape(reader io.Reader) (db.Writer, error)
 }
 
-func Start(scraper Scraper, startURL string) (db.Writer, error) {
+func Start(scraper Scraper, startURL string, method string, body io.Reader, headers map[string]string) (db.Writer, error) {
 	client := &http.Client{
 		Timeout: 0,
 	}
 
 	var object db.Writer
 
-	if resp, reader, err := utils.HTTPGetWithUTF8(client, startURL); err != nil {
+	if resp, reader, err := utils.MakeRequestWithUTF8(client, startURL, method, body, headers); err != nil {
 		return nil, err
 	} else {
 		// successfully got start page
