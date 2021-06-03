@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -52,7 +53,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 		Code:           sc.Code,
 		Specialization: sc.Specialization,
 		Subjects:       make([]entity.Subject, 0, 1000),
-		SubjectCodes:   make(map[string]string, 0),
+		SubjectCodes:   make(map[string]string),
 	}
 
 	// Get Subjects
@@ -90,7 +91,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 
 				subject := obj.(entity.Subject)
 
-				requirementLists := make(map[string][]entity.Requirement, 0)
+				requirementLists := make(map[string][]entity.Requirement)
 				requirements := []entity.Requirement{}
 				groupIndex := 0
 
@@ -108,7 +109,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 
 						reqSplitText := strings.SplitN(reqText, "-", 2)
 						if len(reqSplitText) < 2 {
-							return nil, errors.New("Couldn't parse requirement")
+							return nil, errors.New("couldn't parse requirement")
 						}
 
 						reqCode, reqName := strings.TrimSpace(reqSplitText[0]), strings.TrimSpace(reqSplitText[1])
@@ -136,7 +137,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 				subject.Semester, _ = strconv.Atoi(strings.Split(period.Find(".txt_arial_8pt_black").Text(), "º")[0])
 				subject.TrueRequirements = make([]entity.Requirement, 0)
 
-				count := make(map[string]int, 0)
+				count := make(map[string]int)
 				for _, group := range subject.Requirements {
 					for _, s := range group {
 						count[s.Subject]++
@@ -153,6 +154,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 		optional = true // after the first section, all subjects are optional
 	}
 
+	log.Println("collected", course.Name, "with num subjects:", len(course.Subjects))
 	for _, s := range course.Subjects {
 		course.SubjectCodes[s.Code] = s.Name
 	}
