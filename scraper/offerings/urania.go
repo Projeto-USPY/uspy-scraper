@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
@@ -60,15 +61,17 @@ func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 	exists := make(map[string]struct{})
 
 	offs := []entity.Offering{}
-	for _, v := range hist.History {
+	for year, v := range hist.History {
 		for _, data := range v {
 			if _, ok := exists[data.Code]; !ok {
 				offs = append(offs, entity.Offering{
 					Professor: os.ProfessorName,
 					CodPes:    hist.NUSP.String(),
 					Code:      data.Code,
+					Year:      year,
 				})
 
+				log.Println("collected", os.ProfessorName, hist.NUSP.String(), data.Code, year)
 				exists[data.Code] = struct{}{}
 			}
 		}
