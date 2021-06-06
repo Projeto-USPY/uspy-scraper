@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings/icmc"
 )
 
@@ -18,7 +18,7 @@ func (OfferingsCollector) Collect(DB db.Env) ([]db.Object, error) {
 
 	page := 1
 
-	professors := []entity.Professor{}
+	professors := []models.Professor{}
 	for {
 		sc := icmc.NewICMCPeopleScraper(
 			map[string]string{
@@ -33,10 +33,10 @@ func (OfferingsCollector) Collect(DB db.Env) ([]db.Object, error) {
 			return nil, err
 		}
 
-		if len(result.(entity.Institute).Professors) == 0 {
+		if len(result.(models.Institute).Professors) == 0 {
 			break
 		} else {
-			professors = append(professors, result.(entity.Institute).Professors...)
+			professors = append(professors, result.(models.Institute).Professors...)
 			page++
 		}
 	}

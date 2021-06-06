@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
 )
@@ -49,7 +49,7 @@ func (sc SubjectScraper) Scrape(reader io.Reader) (db.Writer, error) {
 	fields := strings.SplitN(fullName, "-", 2)
 	name := strings.TrimSpace(fields[1])
 
-	subject := entity.Subject{
+	subject := models.Subject{
 		Code:           sc.Code,
 		CourseCode:     sc.CourseCode,
 		Specialization: sc.Specialization,

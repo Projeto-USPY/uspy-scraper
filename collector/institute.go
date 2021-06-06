@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	scraper "github.com/Projeto-USPY/uspy-scraper/scraper/courses"
 )
 
@@ -22,7 +22,7 @@ func (InstituteCollector) Collect(DB db.Env) ([]db.Object, error) {
 		log.Println("done")
 		objs := make([]db.Object, 0)
 
-		var institute = instituteObj.(entity.Institute)
+		var institute = instituteObj.(models.Institute)
 
 		for _, course := range institute.Courses {
 			for _, sub := range course.Subjects {

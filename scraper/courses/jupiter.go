@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
 )
@@ -40,10 +40,10 @@ func (sc JupiterScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 		return nil, err
 	}
 
-	institute := entity.Institute{
+	institute := models.Institute{
 		Name:    strings.TrimSpace(doc.Find("span > b").Text()),
 		Code:    sc.Code,
-		Courses: make([]entity.Course, 0, 50),
+		Courses: make([]models.Course, 0, 50),
 	}
 
 	coursesHref := doc.Find("td[valign=\"top\"] a.link_gray")
@@ -57,7 +57,7 @@ func (sc JupiterScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 			if course, err := courseScraper.Start(); err != nil {
 				return nil, err
 			} else {
-				institute.Courses = append(institute.Courses, course.(entity.Course))
+				institute.Courses = append(institute.Courses, course.(models.Course))
 			}
 		}
 	}

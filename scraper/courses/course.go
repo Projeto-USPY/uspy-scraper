@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
 )
@@ -48,11 +48,11 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 		return nil, err
 	}
 
-	course := entity.Course{
+	course := models.Course{
 		Name:           doc.Find("td > font:nth-child(2) > span").Last().Text(),
 		Code:           sc.Code,
 		Specialization: sc.Specialization,
-		Subjects:       make([]entity.Subject, 0, 1000),
+		Subjects:       make([]models.Subject, 0, 1000),
 		SubjectCodes:   make(map[string]string),
 	}
 
@@ -89,10 +89,10 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 					return nil, err
 				}
 
-				subject := obj.(entity.Subject)
+				subject := obj.(models.Subject)
 
-				requirementLists := make(map[string][]entity.Requirement)
-				requirements := []entity.Requirement{}
+				requirementLists := make(map[string][]models.Requirement)
+				requirements := []models.Requirement{}
 				groupIndex := 0
 
 				// Get requirements of subject
@@ -102,7 +102,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 					if row.Has("b").Length() > 0 { // "row" is an "or"
 						groupIndex++
 						requirementLists[strconv.Itoa(groupIndex)] = requirements
-						requirements = []entity.Requirement{}
+						requirements = []models.Requirement{}
 					} else if row.Has(".txt_arial_8pt_red").Length() > 0 { // "row" is an actual requirement
 						reqText := row.Children().Eq(0).Text()
 						strongText := row.Children().Eq(1).Text()
@@ -115,7 +115,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 						reqCode, reqName := strings.TrimSpace(reqSplitText[0]), strings.TrimSpace(reqSplitText[1])
 
 						if strings.Contains(strongText, "Requisito") {
-							requirements = append(requirements, entity.Requirement{
+							requirements = append(requirements, models.Requirement{
 								Subject: reqCode,
 								Name:    reqName,
 								Strong:  !strings.Contains(strongText, "fraco"),
@@ -135,7 +135,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 				subject.Requirements = requirementLists
 				subject.Optional = optional
 				subject.Semester, _ = strconv.Atoi(strings.Split(period.Find(".txt_arial_8pt_black").Text(), "º")[0])
-				subject.TrueRequirements = make([]entity.Requirement, 0)
+				subject.TrueRequirements = make([]models.Requirement, 0)
 
 				count := make(map[string]int)
 				for _, group := range subject.Requirements {

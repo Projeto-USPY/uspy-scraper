@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings"
 	"github.com/PuerkitoBio/goquery"
@@ -53,7 +53,7 @@ func (os ICMCPeopleScraper) Scrape(reader io.Reader) (obj db.Writer, err error) 
 		return nil, err
 	}
 
-	var inst entity.Institute
+	var inst models.Institute
 
 	sel := doc.Find(".caption > a")
 
@@ -72,7 +72,7 @@ func (os ICMCPeopleScraper) Scrape(reader io.Reader) (obj db.Writer, err error) 
 					uraniaSc := offerings.NewUraniaScraper(codPes, "2015", profName)
 					result, err := uraniaSc.Start()
 
-					if len(result.(entity.Professor).Offerings) == 0 {
+					if len(result.(models.Professor).Offerings) == 0 {
 						log.Println("found no offerings for ", codPes)
 					}
 
@@ -80,7 +80,7 @@ func (os ICMCPeopleScraper) Scrape(reader io.Reader) (obj db.Writer, err error) 
 						return nil, err
 					}
 
-					inst.Professors = append(inst.Professors, result.(entity.Professor))
+					inst.Professors = append(inst.Professors, result.(models.Professor))
 				}
 
 			}
