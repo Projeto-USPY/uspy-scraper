@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 )
 
@@ -57,27 +57,31 @@ func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 		return nil, err
 	}
 
-	// since what only matters is the subject code, we shall not repeat it inside the array, using a set
-	exists := make(map[string]struct{})
+	// since what only matters is the subject code, we will store the last time it was offered by this professor
+	latestOffering := make(map[string]*models.Offering)
 
-	offs := []entity.Offering{}
 	for year, v := range hist.History {
 		for _, data := range v {
-			if _, ok := exists[data.Code]; !ok {
-				offs = append(offs, entity.Offering{
+			if _, ok := latestOffering[data.Code]; !ok {
+				latestOffering[data.Code] = &models.Offering{
 					Professor: os.ProfessorName,
 					CodPes:    hist.NUSP.String(),
 					Code:      data.Code,
 					Year:      year,
-				})
-
-				log.Println("collected", os.ProfessorName, hist.NUSP.String(), data.Code, year)
-				exists[data.Code] = struct{}{}
+				}
+			} else if year > latestOffering[data.Code].Year {
+				latestOffering[data.Code].Year = year
 			}
 		}
 	}
 
-	prof := entity.Professor{
+	offs := make([]models.Offering, 0, 5000)
+	for _, v := range latestOffering {
+		log.Println("collected", v)
+		offs = append(offs, *v)
+	}
+
+	prof := models.Professor{
 		CodPes:    os.Code,
 		Name:      os.ProfessorName,
 		Offerings: offs,
