@@ -55,6 +55,18 @@ github.com/Projeto-USPY/uspy-backend v0.0.0-20210512024519-2cd1e32fd6e5 h1:9pHo1
 github.com/Projeto-USPY/uspy-backend v0.0.0-20210512024519-2cd1e32fd6e5/go.mod h1:SkOJxiy13T+PLpIXFpDcdM1NDMDixm9efBfHgQIAa1M=
 github.com/Projeto-USPY/uspy-backend v0.0.0-20210516002120-fcb1f9a05d38 h1:o1RUXgMscdUPkmIwwun0jhlmROEiqozZj2Kc98Rfjww=
 github.com/Projeto-USPY/uspy-backend v0.0.0-20210516002120-fcb1f9a05d38/go.mod h1:SkOJxiy13T+PLpIXFpDcdM1NDMDixm9efBfHgQIAa1M=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210530193713-112c54298053 h1:Zi+zVzSshly6BurX7mMPkk3LsggxUGeVchTEtT0DMW0=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210530193713-112c54298053/go.mod h1:SkOJxiy13T+PLpIXFpDcdM1NDMDixm9efBfHgQIAa1M=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603042442-a06c769bcb76 h1:txdwVLO4siOjQiLmVvlPobLvYnJRKx4kvn0IWcbHbY4=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603042442-a06c769bcb76/go.mod h1:ydqlU3gihrbSisD3H211/XQrb48xhWtvxbAYp1t28M8=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603044115-b42544d6b658 h1:qkFEvKB20qNIlHV4KEbnNW21svLBQ4cPr7g4NH9pulo=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603044115-b42544d6b658/go.mod h1:ydqlU3gihrbSisD3H211/XQrb48xhWtvxbAYp1t28M8=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603044359-3f56f8e47051 h1:t1MiecfKPpatRrN70LMhsNThO6Z9SWW9nP2KioPdt8w=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603044359-3f56f8e47051/go.mod h1:ydqlU3gihrbSisD3H211/XQrb48xhWtvxbAYp1t28M8=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603045805-f7fd84ab5c79 h1:grPLPs4JOJ2Lwvfl3bYb58CLpSt0v3jz+LFjbareTvQ=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603045805-f7fd84ab5c79/go.mod h1:ydqlU3gihrbSisD3H211/XQrb48xhWtvxbAYp1t28M8=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603190150-87ea0cdc7991 h1:Lp7bFOirlm3eG5nqc2cNX+lgP3rdQbxVN2+RDCJUXus=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20210603190150-87ea0cdc7991/go.mod h1:ydqlU3gihrbSisD3H211/XQrb48xhWtvxbAYp1t28M8=
 github.com/PuerkitoBio/goquery v1.6.1 h1:FgjbQZKl5HTmcn4sKBgvx8vv63nhyhIpv7lJpFGCWpk=
 github.com/PuerkitoBio/goquery v1.6.1/go.mod h1:GsLWisAFVj4WgDibEWF4pvYnkVQBpKBKeU+7zCJoLcc=
 github.com/andybalholm/brotli v1.0.0/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
@@ -72,6 +84,7 @@ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnht
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
@@ -167,6 +180,7 @@ github.com/google/pprof v0.0.0-20210122040257-d980be63207e/go.mod h1:kpwsk12EmLe
 github.com/google/pprof v0.0.0-20210226084205-cbba55b83ad5/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.2.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+vpHVxEJEs9eg=
 github.com/googleapis/gax-go/v2 v2.0.5 h1:sjZBwGj9Jlw33ImPtvFviGYvseOtDM7hkSKB7+Tv3SM=
 github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
@@ -209,6 +223,7 @@ github.com/onsi/ginkgo v1.14.2/go.mod h1:iSB4RoI2tjJc9BBv4NKIKWKya62Rps+oPG/Lv9k
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.10.3/go.mod h1:V9xEwhxec5O8UDM77eCW8vLymOMltsqPVYWrpDsH8xc=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
@@ -227,6 +242,7 @@ github.com/ugorji/go v1.2.0/go.mod h1:1ny++pKMXhLWrwWV5Nf+CbOuZJhMoaFD+0GMFfd8fE
 github.com/ugorji/go/codec v1.1.7/go.mod h1:Ax+UKWsSmolVDwsd+7N3ZtXu+yMGCf907BLYF3GoBXY=
 github.com/ugorji/go/codec v1.2.0 h1:As6RccOIlbm9wHuWYMlB30dErcI+4WiKWsYsmPkyrUw=
 github.com/ugorji/go/codec v1.2.0/go.mod h1:dXvG35r7zTX6QImXOSFhGMmKtX+wJ7VTWzGvYQGIjBs=
+github.com/ulule/limiter/v3 v3.8.0 h1:rq76QxDIq5s/rvXc/A6HRHuGmehi/JE18qK3FaRUxKg=
 github.com/ulule/limiter/v3 v3.8.0/go.mod h1:TpV4HWgOM7M43mrkE7MU1S62/XtuoZ/C9PL+ExxeTK4=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasthttp v1.17.0/go.mod h1:jjraHZVbKOXftJfsOYoAjaeygpj5hr8ermTRJNroD7A=
