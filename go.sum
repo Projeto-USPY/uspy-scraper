@@ -78,6 +78,8 @@ github.com/Projeto-USPY/uspy-backend v0.0.0-20210603190150-87ea0cdc7991 h1:Lp7bF
 github.com/Projeto-USPY/uspy-backend v0.0.0-20210603190150-87ea0cdc7991/go.mod h1:ydqlU3gihrbSisD3H211/XQrb48xhWtvxbAYp1t28M8=
 github.com/Projeto-USPY/uspy-backend v0.0.0-20211029194447-a5611302ee3b h1:vJz5J4w9+/bz8sqaOX/RrPeCXeT9lf1ivQR2sHtPin8=
 github.com/Projeto-USPY/uspy-backend v0.0.0-20211029194447-a5611302ee3b/go.mod h1:F0RUbtZC39IU8vhsqEGrXPgYIRhhbkIfjujojF6pxgk=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20211031002210-295f0b6181df h1:ys8L1zr6ZiD7/h//2ApkeFg4m4VjReHJyKG9oMLMUAc=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20211031002210-295f0b6181df/go.mod h1:IYUCY0S1TmtdX1j7lxbnUXY6PO+cuN5h1M51GJNEE3M=
 github.com/PuerkitoBio/goquery v1.6.1 h1:FgjbQZKl5HTmcn4sKBgvx8vv63nhyhIpv7lJpFGCWpk=
 github.com/PuerkitoBio/goquery v1.6.1/go.mod h1:GsLWisAFVj4WgDibEWF4pvYnkVQBpKBKeU+7zCJoLcc=
 github.com/PuerkitoBio/goquery v1.8.0 h1:PJTF7AmFCFKk1N6V6jmKfrNH9tV5pNE6lZMkG0gta/U=

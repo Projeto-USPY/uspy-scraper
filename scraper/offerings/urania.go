@@ -57,28 +57,36 @@ func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 		return nil, err
 	}
 
-	// since what only matters is the subject code, we will store the last time it was offered by this professor
-	latestOffering := make(map[string]*models.Offering)
+	// we will store all years this subject was offered by a professor
+	offeringYears := make(map[*models.Offering][]string)
 
 	for year, v := range hist.History {
 		for _, data := range v {
-			if _, ok := latestOffering[data.Code]; !ok {
-				latestOffering[data.Code] = &models.Offering{
-					Professor: os.ProfessorName,
-					CodPes:    hist.NUSP.String(),
-					Code:      data.Code,
-					Year:      year,
-				}
-			} else if year > latestOffering[data.Code].Year {
-				latestOffering[data.Code].Year = year
+			offering := &models.Offering{
+				Professor: os.ProfessorName,
+				CodPes:    hist.NUSP.String(),
+				Code:      data.Code,
 			}
+
+			if len(offeringYears[offering]) == 0 {
+				offeringYears[offering] = make([]string, 0)
+			}
+
+			offeringYears[offering] = append(offeringYears[offering], year)
 		}
 	}
 
 	offs := make([]models.Offering, 0, 5000)
-	for _, v := range latestOffering {
-		log.Println("collected", v)
-		offs = append(offs, *v)
+	for k, v := range offeringYears {
+		collectedOffering := models.Offering{
+			Professor: k.Professor,
+			CodPes:    k.CodPes,
+			Code:      k.Code,
+			Years:     v,
+		}
+
+		log.Println("collected", collectedOffering)
+		offs = append(offs, collectedOffering)
 	}
 
 	prof := models.Professor{
