@@ -16,6 +16,7 @@ steps:
       '--platform=managed',
       "--set-env-vars=\
       USPY_DOMAIN=$_DOMAIN,\
+      MODE=$_MODE,\
       USPY_PROJECT_ID=$_PROJECT_ID"]
 
 # Assign 100% of the traffic to the latest version
