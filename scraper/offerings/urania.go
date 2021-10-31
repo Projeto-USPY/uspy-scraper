@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
@@ -85,7 +84,6 @@ func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 			Years:     v,
 		}
 
-		log.Println("collected", collectedOffering)
 		offs = append(offs, collectedOffering)
 	}
 
