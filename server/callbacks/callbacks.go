@@ -45,7 +45,7 @@ func Execute(
 
 				log.Println("running operation for collector", col.Name())
 				if opErr := operationFunc(env, col, objs); opErr != nil {
-					ctx.AbortWithError(http.StatusInternalServerError, fmt.Errorf("%s: %s", ErrOperationFailed, err))
+					ctx.AbortWithError(http.StatusInternalServerError, fmt.Errorf("%s: %s", ErrOperationFailed, opErr))
 					return
 				}
 			} else {
