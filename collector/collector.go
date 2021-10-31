@@ -73,3 +73,9 @@ func Update(DB db.Env, c Collector, objs []db.Object) error {
 	log.Printf("updated %d total objects\n", len(objs))
 	return nil
 }
+
+func Log(DB db.Env, c Collector, objs []db.Object) error {
+	log.Println("logging", c.Name())
+	log.Println("collected", len(objs), "objects")
+	return nil
+}
