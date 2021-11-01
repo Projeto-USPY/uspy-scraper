@@ -3,7 +3,7 @@ module github.com/Projeto-USPY/uspy-scraper
 go 1.16
 
 require (
-	github.com/Projeto-USPY/uspy-backend v0.0.0-20211031002210-295f0b6181df
+	github.com/Projeto-USPY/uspy-backend v0.0.0-20211101224657-222056170148
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/gin-gonic/gin v1.7.4
 	github.com/json-iterator/go v1.1.12 // indirect

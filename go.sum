@@ -52,8 +52,8 @@ firebase.google.com/go v3.13.0+incompatible/go.mod h1:xlah6XbEyW6tbfSklcfe5FHJIw
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
-github.com/Projeto-USPY/uspy-backend v0.0.0-20211031002210-295f0b6181df h1:ys8L1zr6ZiD7/h//2ApkeFg4m4VjReHJyKG9oMLMUAc=
-github.com/Projeto-USPY/uspy-backend v0.0.0-20211031002210-295f0b6181df/go.mod h1:IYUCY0S1TmtdX1j7lxbnUXY6PO+cuN5h1M51GJNEE3M=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20211101224657-222056170148 h1:puxARMQusGZqsOb25auQq7JKWy3lzfeAUFUBpO6WEUw=
+github.com/Projeto-USPY/uspy-backend v0.0.0-20211101224657-222056170148/go.mod h1:IYUCY0S1TmtdX1j7lxbnUXY6PO+cuN5h1M51GJNEE3M=
 github.com/PuerkitoBio/goquery v1.8.0 h1:PJTF7AmFCFKk1N6V6jmKfrNH9tV5pNE6lZMkG0gta/U=
 github.com/PuerkitoBio/goquery v1.8.0/go.mod h1:ypIiRMtY7COPGk+I/YbZLbxsxn9g5ejnI2HSMtkjZvI=
 github.com/andybalholm/brotli v1.0.0/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
