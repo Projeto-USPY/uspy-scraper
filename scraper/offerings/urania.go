@@ -56,8 +56,8 @@ func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 		return nil, err
 	}
 
-	// we will store all years this subject was offered by a professor
-	offeringYears := make(map[*models.Offering][]string)
+	// we will store all offerings for each subject offered by this professor
+	allOfferings := make(map[string]map[string]*models.Offering)
 
 	for year, v := range hist.History {
 		for _, data := range v {
@@ -67,24 +67,30 @@ func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 				Code:      data.Code,
 			}
 
-			if len(offeringYears[offering]) == 0 {
-				offeringYears[offering] = make([]string, 0)
+			if len(allOfferings[offering.Code]) == 0 {
+				allOfferings[offering.Code] = make(map[string]*models.Offering)
 			}
 
-			offeringYears[offering] = append(offeringYears[offering], year)
+			offering.Years = []string{year}
+			allOfferings[offering.Code][year] = offering
 		}
 	}
 
+	// flatten offerings
 	offs := make([]models.Offering, 0, 5000)
-	for k, v := range offeringYears {
-		collectedOffering := models.Offering{
-			Professor: k.Professor,
-			CodPes:    k.CodPes,
-			Code:      k.Code,
-			Years:     v,
+	for k, v := range allOfferings {
+		flattenedOffering := models.Offering{
+			Code:      k,
+			CodPes:    os.Code,
+			Professor: os.ProfessorName,
+			Years:     make([]string, 0, len(v)),
 		}
 
-		offs = append(offs, collectedOffering)
+		for year := range v {
+			flattenedOffering.Years = append(flattenedOffering.Years, year)
+		}
+
+		offs = append(offs, flattenedOffering)
 	}
 
 	prof := models.Professor{
