@@ -15,7 +15,7 @@ import (
 var (
 	ErrCollectedObjects = errors.New("could not collect objects")
 	ErrOperationFailed  = errors.New("could not run operation")
-	ErrBadTarget        = errors.New("could not run specified targets. Possible values are: subjects, offerings")
+	ErrBadTarget        = errors.New("could not run specified targets. Possible values are: subjects, icmc-offerings, icmc-people-offerings")
 )
 
 func Execute(
@@ -26,8 +26,8 @@ func Execute(
 		targetQuery := ctx.Query("targets")
 		var targets []string
 		if len(targetQuery) == 0 { // no targets specified
-			log.Println("no targets specified, defaulting to [subjects, offerings]")
-			targets = []string{"subjects", "offerings"}
+			log.Println("no targets specified, defaulting to [subjects, icmc-offerings, icmc-people-offerings]")
+			targets = []string{"subjects", "icmc-offerings", "icmc-people-offerings"}
 		} else {
 			targets = strings.SplitN(targetQuery, ",", -1)
 		}
