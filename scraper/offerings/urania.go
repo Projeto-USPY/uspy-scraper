@@ -45,7 +45,7 @@ func NewUraniaScraper(code, since, name string) UraniaScraper {
 
 func (os UraniaScraper) Start() (db.Writer, error) {
 	URL := fmt.Sprintf(os.URLMask, os.Code, os.Since)
-	return scraper.Start(os, URL, http.MethodGet, nil, nil)
+	return scraper.Start(os, URL, http.MethodGet, nil, nil, true)
 }
 
 func (os UraniaScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {

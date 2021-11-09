@@ -16,8 +16,9 @@ type Collector interface {
 
 // Collectors contains all the Collectors that we'd like to run in build or update mode
 var Collectors = map[string]Collector{
-	"subjects":  InstituteCollector{},
-	"offerings": OfferingsCollector{},
+	"subjects":              InstituteCollector{},
+	"icmc-offerings":        ICMCOfferingsCollector{},
+	"icmc-people-offerings": ICMCPeopleOfferingsCollector{},
 }
 
 func Build(DB db.Env, c Collector, objs []db.Object) error {

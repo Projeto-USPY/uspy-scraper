@@ -44,7 +44,7 @@ func (os ICMCPeopleScraper) Start() (db.Writer, error) {
 		"Content-Length": strconv.Itoa(len(data.Encode())),
 	}
 
-	return scraper.Start(os, os.URLMask, http.MethodPost, strings.NewReader(data.Encode()), headers)
+	return scraper.Start(os, os.URLMask, http.MethodPost, strings.NewReader(data.Encode()), headers, true)
 }
 
 func (os ICMCPeopleScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {

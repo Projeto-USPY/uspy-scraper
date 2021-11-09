@@ -39,7 +39,7 @@ func NewCourseScraper(institute, course, spec string) CourseScraper {
 }
 func (sc CourseScraper) Start() (db.Writer, error) {
 	URL := fmt.Sprintf(sc.URLMask, sc.InstituteCode, sc.Code, sc.Specialization)
-	return scraper.Start(sc, URL, http.MethodGet, nil, nil)
+	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
 }
 
 func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {

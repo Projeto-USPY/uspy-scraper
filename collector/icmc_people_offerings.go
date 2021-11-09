@@ -10,12 +10,12 @@ import (
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings/icmc"
 )
 
-type OfferingsCollector struct{}
+type ICMCPeopleOfferingsCollector struct{}
 
-func (OfferingsCollector) Name() string { return "offerings" }
+func (ICMCPeopleOfferingsCollector) Name() string { return "icmc people offerings" }
 
-func (OfferingsCollector) Collect(DB db.Env) ([]db.Object, error) {
-	log.Println("collecting offerings data")
+func (ICMCPeopleOfferingsCollector) Collect(DB db.Env) ([]db.Object, error) {
+	log.Println("collecting icmc people offerings data")
 
 	page := 1
 
@@ -42,14 +42,14 @@ func (OfferingsCollector) Collect(DB db.Env) ([]db.Object, error) {
 		}
 	}
 
-	log.Println("creating subject objects for offerings, this may take a while")
+	log.Println("creating subject objects for icmc people offerings, this may take a while")
 	objects := make([]db.Object, 0, 500)
 
 	errors := make(chan error)
 	cnt := 0
 
 	for _, p := range professors {
-		log.Println("creating subject objects for offerings from professor", p.Name)
+		log.Println("creating subject objects for icmc people offerings from professor", p.Name)
 		subjectPaths := make(map[string]struct{})
 		cnt += len(p.Offerings)
 

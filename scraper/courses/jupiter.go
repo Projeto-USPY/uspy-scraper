@@ -31,7 +31,7 @@ func NewJupiterScraper(institute string) JupiterScraper {
 
 func (sc JupiterScraper) Start() (db.Writer, error) {
 	URL := fmt.Sprintf(sc.URLMask, sc.Code)
-	return scraper.Start(sc, URL, http.MethodGet, nil, nil)
+	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
 }
 
 func (sc JupiterScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
