@@ -1,14 +1,21 @@
-package scraper
+package courses
 
 import (
 	"fmt"
-	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
-	"github.com/PuerkitoBio/goquery"
 	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Projeto-USPY/uspy-backend/db"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/scraper"
+	"github.com/PuerkitoBio/goquery"
+)
+
+var (
+	DefaultSubjectURLMask = "https://uspdigital.usp.br/jupiterweb/obterDisciplina?sgldis=%s&codcur=%s&codhab=%s"
 )
 
 type SubjectScraper struct {
@@ -29,7 +36,7 @@ func NewSubjectScraper(subject, course, spec string) SubjectScraper {
 
 func (sc SubjectScraper) Start() (db.Writer, error) {
 	URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.CourseCode, sc.Specialization)
-	return Start(sc, URL)
+	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
 }
 
 func (sc SubjectScraper) Scrape(reader io.Reader) (db.Writer, error) {
@@ -42,7 +49,7 @@ func (sc SubjectScraper) Scrape(reader io.Reader) (db.Writer, error) {
 	fields := strings.SplitN(fullName, "-", 2)
 	name := strings.TrimSpace(fields[1])
 
-	subject := entity.Subject{
+	subject := models.Subject{
 		Code:           sc.Code,
 		CourseCode:     sc.CourseCode,
 		Specialization: sc.Specialization,

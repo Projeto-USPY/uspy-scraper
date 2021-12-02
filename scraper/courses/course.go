@@ -1,15 +1,25 @@
-package scraper
+package courses
 
 import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
+)
+
+var (
+	ErrorCourseNotExist   = errors.New("could not fetch course in institute page")
+	ErrorCourseNoSubjects = errors.New("could not fetch subjects in course page")
+
+	DefaultCourseURLMask = "https://uspdigital.usp.br/jupiterweb/listarGradeCurricular?codcg=%s&codcur=%s&codhab=%s&tipo=N"
 )
 
 type CourseScraper struct {
@@ -29,7 +39,7 @@ func NewCourseScraper(institute, course, spec string) CourseScraper {
 }
 func (sc CourseScraper) Start() (db.Writer, error) {
 	URL := fmt.Sprintf(sc.URLMask, sc.InstituteCode, sc.Code, sc.Specialization)
-	return Start(sc, URL)
+	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
 }
 
 func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
@@ -38,12 +48,12 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 		return nil, err
 	}
 
-	course := entity.Course{
+	course := models.Course{
 		Name:           doc.Find("td > font:nth-child(2) > span").Last().Text(),
 		Code:           sc.Code,
 		Specialization: sc.Specialization,
-		Subjects:       make([]entity.Subject, 0, 1000),
-		SubjectCodes:   make(map[string]string, 0),
+		Subjects:       make([]models.Subject, 0, 1000),
+		SubjectCodes:   make(map[string]string),
 	}
 
 	// Get Subjects
@@ -79,10 +89,10 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 					return nil, err
 				}
 
-				subject := obj.(entity.Subject)
+				subject := obj.(models.Subject)
 
-				requirementLists := make(map[string][]entity.Requirement, 0)
-				requirements := []entity.Requirement{}
+				requirementLists := make(map[string][]models.Requirement)
+				requirements := []models.Requirement{}
 				groupIndex := 0
 
 				// Get requirements of subject
@@ -92,20 +102,20 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 					if row.Has("b").Length() > 0 { // "row" is an "or"
 						groupIndex++
 						requirementLists[strconv.Itoa(groupIndex)] = requirements
-						requirements = []entity.Requirement{}
+						requirements = []models.Requirement{}
 					} else if row.Has(".txt_arial_8pt_red").Length() > 0 { // "row" is an actual requirement
 						reqText := row.Children().Eq(0).Text()
 						strongText := row.Children().Eq(1).Text()
 
 						reqSplitText := strings.SplitN(reqText, "-", 2)
 						if len(reqSplitText) < 2 {
-							return nil, errors.New("Couldn't parse requirement")
+							return nil, errors.New("couldn't parse requirement")
 						}
 
 						reqCode, reqName := strings.TrimSpace(reqSplitText[0]), strings.TrimSpace(reqSplitText[1])
 
 						if strings.Contains(strongText, "Requisito") {
-							requirements = append(requirements, entity.Requirement{
+							requirements = append(requirements, models.Requirement{
 								Subject: reqCode,
 								Name:    reqName,
 								Strong:  !strings.Contains(strongText, "fraco"),
@@ -125,9 +135,9 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 				subject.Requirements = requirementLists
 				subject.Optional = optional
 				subject.Semester, _ = strconv.Atoi(strings.Split(period.Find(".txt_arial_8pt_black").Text(), "º")[0])
-				subject.TrueRequirements = make([]entity.Requirement, 0)
+				subject.TrueRequirements = make([]models.Requirement, 0)
 
-				count := make(map[string]int, 0)
+				count := make(map[string]int)
 				for _, group := range subject.Requirements {
 					for _, s := range group {
 						count[s.Subject]++
@@ -144,6 +154,7 @@ func (sc CourseScraper) Scrape(reader io.Reader) (db.Writer, error) {
 		optional = true // after the first section, all subjects are optional
 	}
 
+	log.Println("collected", course.Name, "with num subjects:", len(course.Subjects))
 	for _, s := range course.Subjects {
 		course.SubjectCodes[s.Code] = s.Name
 	}

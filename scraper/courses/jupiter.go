@@ -1,42 +1,49 @@
-package scraper
+package courses
 
 import (
 	"fmt"
-	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-backend/entity"
-	"github.com/PuerkitoBio/goquery"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/Projeto-USPY/uspy-backend/db"
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/scraper"
+	"github.com/PuerkitoBio/goquery"
 )
 
-type InstituteScraper struct {
+var (
+	DefaultInstituteURLMask = "https://uspdigital.usp.br/jupiterweb/jupCursoLista?codcg=%s&tipo=N"
+)
+
+type JupiterScraper struct {
 	URLMask string
 	Code    string
 }
 
-func NewInstituteScraper(institute string) InstituteScraper {
-	return InstituteScraper{
+func NewJupiterScraper(institute string) JupiterScraper {
+	return JupiterScraper{
 		URLMask: DefaultInstituteURLMask,
 		Code:    institute,
 	}
 }
 
-func (sc InstituteScraper) Start() (db.Writer, error) {
+func (sc JupiterScraper) Start() (db.Writer, error) {
 	URL := fmt.Sprintf(sc.URLMask, sc.Code)
-	return Start(sc, URL)
+	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
 }
 
-func (sc InstituteScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
+func (sc JupiterScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, err
 	}
 
-	institute := entity.Institute{
+	institute := models.Institute{
 		Name:    strings.TrimSpace(doc.Find("span > b").Text()),
 		Code:    sc.Code,
-		Courses: make([]entity.Course, 0, 50),
+		Courses: make([]models.Course, 0, 50),
 	}
 
 	coursesHref := doc.Find("td[valign=\"top\"] a.link_gray")
@@ -50,7 +57,7 @@ func (sc InstituteScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
 			if course, err := courseScraper.Start(); err != nil {
 				return nil, err
 			} else {
-				institute.Courses = append(institute.Courses, course.(entity.Course))
+				institute.Courses = append(institute.Courses, course.(models.Course))
 			}
 		}
 	}

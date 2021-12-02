@@ -1,9 +1,10 @@
-package scraper
+package courses
 
 import (
-	"github.com/Projeto-USPY/uspy-backend/entity"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestInput struct {
@@ -14,7 +15,7 @@ type TestInput struct {
 
 var testCases = []struct {
 	input    TestInput
-	expected entity.Subject
+	expected models.Subject
 }{
 	{
 		input: TestInput{
@@ -22,7 +23,7 @@ var testCases = []struct {
 			course:         "55090",
 			specialization: "0",
 		},
-		expected: entity.Subject{
+		expected: models.Subject{
 			Code:           "SCC0230",
 			CourseCode:     "55090",
 			Specialization: "0",
@@ -40,7 +41,7 @@ var testCases = []struct {
 			course:         "55041",
 			specialization: "0",
 		},
-		expected: entity.Subject{
+		expected: models.Subject{
 			Code:           "SCC0222",
 			CourseCode:     "55041",
 			Specialization: "0",
@@ -58,7 +59,7 @@ var testCases = []struct {
 			course:         "55041",
 			specialization: "0",
 		},
-		expected: entity.Subject{
+		expected: models.Subject{
 			Code:           "SCC0260",
 			CourseCode:     "55041",
 			Specialization: "0",
@@ -79,7 +80,7 @@ func TestNewSubjectScraper(t *testing.T) {
 		if sub, err := sc.Start(); err != nil {
 			t.Fatal(err)
 		} else {
-			assert.Equal(t, sub.(entity.Subject), tc.expected)
+			assert.Equal(t, sub.(models.Subject), tc.expected)
 		}
 
 	}

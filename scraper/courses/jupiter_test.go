@@ -1,12 +1,12 @@
-package scraper
+package courses
 
 import (
 	"encoding/json"
 	"testing"
 )
 
-func TestNewInstituteScraper(t *testing.T) {
-	instituteSc := NewInstituteScraper("55")
+func TestNewJupiterScraper(t *testing.T) {
+	instituteSc := NewJupiterScraper("55")
 	if institute, err := instituteSc.Start(); err != nil {
 		t.Fatal(err)
 	} else {
