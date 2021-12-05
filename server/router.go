@@ -22,6 +22,7 @@ func setupRoutes(router *gin.Engine) {
 
 func InitRouter() {
 	r := gin.Default()
+	r.Use(gin.Recovery())
 	setupRoutes(r)
 
 	r.Run(config.Env.Domain + ":" + config.Env.Port)
