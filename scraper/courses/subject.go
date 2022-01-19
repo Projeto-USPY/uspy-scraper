@@ -169,6 +169,11 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 
 		fullName := doc.Find("span.txt_arial_10pt_black > b").Text()
 		fields := strings.SplitN(fullName, "-", 2)
+
+		if len(fields) < 2 {
+			return nil, errors.New("could not get subject name, this is unexpected")
+		}
+
 		name := strings.TrimSpace(fields[1])
 
 		subject := models.Subject{
