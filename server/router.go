@@ -17,7 +17,6 @@ func init() {
 func setupRoutes(router *gin.Engine) {
 	router.POST("/update", callbacks.Update(env))
 	router.POST("/build", callbacks.Build(env))
-	router.POST("/log", callbacks.Log(env))
 }
 
 func InitRouter() {

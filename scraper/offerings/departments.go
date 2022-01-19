@@ -3,20 +3,28 @@ package offerings
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"time"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
+	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 )
 
 var (
 	// {institute}
 	DefaultDepartmentsURLMask = "https://uspdigital.usp.br/datausp/servicos/publico/listagem/departamentos/%s"
+
+	// {year, institute}
+	fallbackDepartmentsURLMask = "https://uspdigital.usp.br/datausp/servicos/publico/indicadores/unidade/graficos/docenteDepartamento/%d/%s"
 )
 
 type DepartmentsList []struct {
 	Department json.Number `json:"codset"`
+}
+
+type fallbackDepartmentsList []struct {
+	Department json.Number `json:"codigoSetor"`
 }
 
 func (d DepartmentsList) Insert(_ db.Env, _ string) error { return nil }
@@ -34,18 +42,41 @@ func NewDepartmentsScraper(institute string) DepartmentsScraper {
 	}
 }
 
-func (sc DepartmentsScraper) Start() (db.Writer, error) {
-	URL := fmt.Sprintf(sc.DepartmentsURLMask, sc.Institute)
-	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
+func getDepartments(mask string, resultsPointer interface{}, params ...interface{}) error {
+	URL := fmt.Sprintf(mask, params...)
+
+	resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	dec := json.NewDecoder(reader)
+	return dec.Decode(&resultsPointer)
 }
 
-func (sc DepartmentsScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
-	dec := json.NewDecoder(reader)
+func (sc *DepartmentsScraper) Process() func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		var results DepartmentsList
+		var fallback fallbackDepartmentsList
 
-	var deps DepartmentsList
-	if err := dec.Decode(&deps); err != nil {
-		return nil, err
+		if err := getDepartments(sc.DepartmentsURLMask, &results, sc.Institute); err != nil {
+			return nil, err
+		}
+
+		if len(results) == 0 { // use fallback
+			year := time.Now().Year()
+			if err := getDepartments(fallbackDepartmentsURLMask, &fallback, year, sc.Institute); err != nil {
+				return nil, err
+			}
+
+			for _, f := range fallback {
+				results = append(results, struct {
+					Department json.Number "json:\"codset\""
+				}{f.Department})
+			}
+		}
+
+		return results, nil
 	}
-
-	return deps, nil
 }

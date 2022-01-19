@@ -2,13 +2,12 @@ package courses
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strings"
 
-	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
 )
@@ -29,41 +28,6 @@ func NewJupiterScraper(institute string) JupiterScraper {
 	}
 }
 
-func (sc JupiterScraper) Start() (db.Writer, error) {
-	URL := fmt.Sprintf(sc.URLMask, sc.Code)
-	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
-}
-
-func (sc JupiterScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
-	doc, err := goquery.NewDocumentFromReader(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	institute := models.Institute{
-		Name:    strings.TrimSpace(doc.Find("span > b").Text()),
-		Code:    sc.Code,
-		Courses: make([]models.Course, 0, 50),
-	}
-
-	coursesHref := doc.Find("td[valign=\"top\"] a.link_gray")
-	for i := 0; i < coursesHref.Length(); i++ {
-		// follow every course href
-		node := coursesHref.Eq(i)
-		if courseCode, courseSpec, err := getCourseIdentifiers(node); err != nil {
-			return nil, err
-		} else {
-			courseScraper := NewCourseScraper(sc.Code, courseCode, courseSpec)
-			if course, err := courseScraper.Start(); err != nil {
-				return nil, err
-			} else {
-				institute.Courses = append(institute.Courses, course.(models.Course))
-			}
-		}
-	}
-	return institute, nil
-}
-
 func getCourseIdentifiers(node *goquery.Selection) (string, string, error) {
 	if courseURL, exists := node.Attr("href"); exists {
 		// get course code and specialization code
@@ -78,5 +42,68 @@ func getCourseIdentifiers(node *goquery.Selection) (string, string, error) {
 		return courseCode, courseSpec, nil
 	} else {
 		return "", "", ErrorCourseNotExist
+	}
+}
+
+func (sc *JupiterScraper) Process() func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		URL := fmt.Sprintf(sc.URLMask, sc.Code)
+		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		doc, err := goquery.NewDocumentFromReader(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		institute := models.Institute{
+			Name:    strings.TrimSpace(doc.Find("span > b").Text()),
+			Code:    sc.Code,
+			Courses: make([]models.Course, 0, 50),
+		}
+
+		courseTasks := make([]*processor.Task, 0)
+
+		coursesHref := doc.Find("td[valign=\"top\"] a.link_gray")
+		for i := 0; i < coursesHref.Length(); i++ {
+			// follow every course href
+			node := coursesHref.Eq(i)
+			if courseCode, courseSpec, err := getCourseIdentifiers(node); err != nil {
+				return nil, err
+			} else {
+				courseScraper := NewCourseScraper(sc.Code, courseCode, courseSpec)
+				courseTasks = append(courseTasks, processor.NewTask(
+					fmt.Sprintf(
+						"[course-task] %s:%s",
+						institute.Code,
+						courseCode,
+					),
+					processor.QuadraticDelay,
+					courseScraper.Process(),
+					nil,
+				))
+			}
+		}
+
+		proc := processor.NewProcessor(
+			fmt.Sprintf(
+				"[institute-processor] %s",
+				institute.Code,
+			),
+			courseTasks,
+			true,
+		)
+
+		results := proc.Run()
+
+		for _, course := range results {
+			institute.Courses = append(institute.Courses, course.(models.Course))
+		}
+
+		return institute, nil
+
 	}
 }
