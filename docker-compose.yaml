@@ -15,12 +15,11 @@ services:
       context: .
       dockerfile: ./docker/app/Dockerfile
     ports: 
-      - "8080:8080"
+      - "8300:8300"
     environment:
       - FIRESTORE_EMULATOR_HOST=firestore_emulator:8200
       - USPY_PROJECT_ID=dummy-project-id
       - USPY_DOMAIN=0.0.0.0
       - USPY_ENFORCE_LOCAL=true
       - USPY_MODE=local
-    depends_on:
-      - firestore_emulator
+      - USPY_PORT=8300

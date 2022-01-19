@@ -3,7 +3,6 @@ package server
 import (
 	"github.com/Projeto-USPY/uspy-backend/config"
 	"github.com/Projeto-USPY/uspy-backend/db"
-	"github.com/Projeto-USPY/uspy-scraper/collector"
 	"github.com/Projeto-USPY/uspy-scraper/server/callbacks"
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +15,8 @@ func init() {
 }
 
 func setupRoutes(router *gin.Engine) {
-	router.POST("/update", callbacks.Update(env, collector.Updators...))
+	router.POST("/update", callbacks.Update(env))
+	router.POST("/build", callbacks.Build(env))
 }
 
 func InitRouter() {

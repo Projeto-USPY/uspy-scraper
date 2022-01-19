@@ -112,9 +112,14 @@ func (proc *Processor) Run() []Processed {
 					log.WithFields(log.Fields{
 						"agent": proc.Name,
 						"job":   job.Name,
-					}).Debugln("working")
+					}).Debugln("starting job")
+
 					// fail job if exceeded retries
 					if proc.MaxAttempts != -1 && job.currentAttempt > proc.MaxAttempts {
+						log.WithFields(log.Fields{
+							"agent": proc.Name,
+							"job":   job.Name,
+						}).Debugln("job exceeded max retries, failing...")
 						proc.failed <- job
 						continue
 					}
@@ -131,12 +136,18 @@ func (proc *Processor) Run() []Processed {
 						result, processingErr = job.Process()
 						if processingErr != nil {
 							failed = true // processing failure
-							log.Debugf("[processing-failure] job: %s, reason: %s\n", job.Name, processingErr)
+							log.WithFields(log.Fields{
+								"agent": proc.Name,
+								"job":   job.Name,
+							}).Debugln("processing failure")
 							failedErr = processingErr
 						} else if job.After != nil {
 							if err := job.After(result); err != nil {
 								failed = true // after-processing failure
-								log.Debugf("[after-processing-failure] job: %s, reason: %s\n", job.Name, err)
+								log.WithFields(log.Fields{
+									"agent": proc.Name,
+									"job":   job.Name,
+								}).Debugf("after processing failure: %s\n", err)
 
 								failedErr = err
 							}
@@ -147,12 +158,21 @@ func (proc *Processor) Run() []Processed {
 					}
 
 					if failed {
+						log.WithFields(log.Fields{
+							"agent": proc.Name,
+							"job":   job.Name,
+						}).Debugln("job failed, delaying...")
+
 						job.currentAttempt++
 						job.lastTried = time.Now()
 						job.err = failedErr
 
 						proc.jobs <- job
 					} else {
+						log.WithFields(log.Fields{
+							"agent": proc.Name,
+							"job":   job.Name,
+						}).Debugln("job successful")
 						proc.results <- result
 					}
 				}

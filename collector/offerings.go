@@ -11,7 +11,11 @@ import (
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings"
 )
 
-func CollectOfferings(DB db.Env, queryParams map[string][]string) {
+func CollectOfferings(
+	DB db.Env,
+	queryParams map[string][]string,
+	afterCallback func(db.Env) func(results processor.Processed) error,
+) {
 	scraper := offerings.NewProfessorScraper(queryParams["institute"][0])
 	processor.NewProcessor(
 		"[offerings-processor]",
@@ -20,16 +24,16 @@ func CollectOfferings(DB db.Env, queryParams map[string][]string) {
 				"offerings-task",
 				processor.QuadraticDelay,
 				scraper.Process(),
-				updateOfferingsData(DB),
+				afterCallback(DB),
 			),
 		},
 		true,
 	).Run()
 }
 
-func updateOfferingsData(DB db.Env) func(results processor.Processed) error {
+func setOfferingsData(DB db.Env) func(results processor.Processed) error {
 	return func(result processor.Processed) error {
-		objects := make([]db.Object, 0, 500)
+		objects := make([]db.BatchObject, 0, 500)
 		errors := make(chan error)
 		cnt := 0
 
@@ -56,10 +60,10 @@ func updateOfferingsData(DB db.Env) func(results processor.Processed) error {
 								id := d.Ref.ID
 
 								mutex.Lock()
-								objects = append(objects, db.Object{
+								objects = append(objects, db.BatchObject{
 									Collection: "subjects/" + id + "/offerings",
 									Doc:        off.Hash(),
-									Data:       off,
+									WriteData:  off,
 								})
 								mutex.Unlock()
 
@@ -80,6 +84,14 @@ func updateOfferingsData(DB db.Env) func(results processor.Processed) error {
 			}
 		}
 
-		return Update(DB, objects)
+		return DB.BatchWrite(objects)
 	}
+}
+
+func BuildOfferingsData(DB db.Env) func(results processor.Processed) error {
+	return setOfferingsData(DB)
+}
+
+func UpdateOfferingsData(DB db.Env) func(results processor.Processed) error {
+	return setOfferingsData(DB)
 }
