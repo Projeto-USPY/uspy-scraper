@@ -2,15 +2,14 @@ package icmc
 
 import (
 	"errors"
-	"io"
-	"log"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings"
 	"github.com/PuerkitoBio/goquery"
@@ -33,61 +32,80 @@ func NewICMCPeopleScraper(body map[string]string) ICMCPeopleScraper {
 	}
 }
 
-func (os ICMCPeopleScraper) Start() (db.Writer, error) {
-	data := url.Values{}
-	for k, v := range os.Body {
-		data.Set(k, v)
-	}
-
-	headers := map[string]string{
-		"Content-Type":   "application/x-www-form-urlencoded",
-		"Content-Length": strconv.Itoa(len(data.Encode())),
-	}
-
-	return scraper.Start(os, os.URLMask, http.MethodPost, strings.NewReader(data.Encode()), headers, true)
-}
-
-func (os ICMCPeopleScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
-	doc, err := goquery.NewDocumentFromReader(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	var inst models.Institute
-
-	sel := doc.Find(".caption > a")
-
-	for i := 0; i < sel.Length(); i++ {
-		ithSel := sel.Eq(i)
-
-		if href, ok := ithSel.Attr("href"); ok {
-			seps := strings.Split(href, "=")
-			if len(seps) > 1 {
-				code, profName := seps[1], ithSel.Text()
-
-				if num, err := strconv.Atoi(code); err != nil {
-					return nil, err
-				} else {
-					codPes := strconv.Itoa((num - 3) / 2)
-					uraniaSc := offerings.NewUraniaScraper(codPes, "2015", profName)
-					result, err := uraniaSc.Start()
-
-					if len(result.(models.Professor).Offerings) == 0 {
-						log.Println("found no offerings for ", codPes)
-					}
-
-					if err != nil {
-						return nil, err
-					}
-
-					inst.Professors = append(inst.Professors, result.(models.Professor))
-				}
-
-			}
-		} else {
-			return nil, errors.New("failed to fetch professor href")
+func (sc *ICMCPeopleScraper) Process() func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		data := url.Values{}
+		for k, v := range sc.Body {
+			data.Set(k, v)
 		}
-	}
 
-	return inst, nil
+		headers := map[string]string{
+			"Content-Type":   "application/x-www-form-urlencoded",
+			"Content-Length": strconv.Itoa(len(data.Encode())),
+		}
+
+		resp, reader, err := scraper.Fetch(sc.URLMask, http.MethodPost, strings.NewReader(data.Encode()), headers, true)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		doc, err := goquery.NewDocumentFromReader(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		var inst models.Institute
+
+		sel := doc.Find(".caption > a")
+
+		offeringTasks := make([]*processor.Task, 0)
+
+		for i := 0; i < sel.Length(); i++ {
+			ithSel := sel.Eq(i)
+
+			if href, ok := ithSel.Attr("href"); ok {
+				seps := strings.Split(href, "=")
+				if len(seps) > 1 {
+					code, profName := seps[1], ithSel.Text()
+
+					if num, err := strconv.Atoi(code); err != nil {
+						return nil, err
+					} else {
+						codPes := strconv.Itoa((num - 3) / 2)
+						uraniaSc := offerings.NewUraniaScraper(codPes, "2015", profName)
+						offeringTasks = append(offeringTasks, processor.NewTask(
+							fmt.Sprintf(
+								"[offering-task] %s:%s",
+								codPes,
+								strings.ReplaceAll(strings.ToLower(profName), " ", "_"),
+							),
+							processor.QuadraticDelay,
+							uraniaSc.Process(),
+							nil,
+						))
+					}
+
+				}
+			} else {
+				return nil, errors.New("failed to fetch professor href")
+			}
+		}
+
+		proc := processor.NewProcessor(
+			"[icmc-people-processor]",
+			offeringTasks,
+			processor.Config.Processor.NumWorkers,
+			processor.Config.Processor.MaxAttempts,
+			processor.Config.Processor.Timeout,
+		)
+
+		results := proc.Run()
+
+		for _, result := range results {
+			inst.Professors = append(inst.Professors, result.(models.Professor))
+		}
+
+		return inst, nil
+	}
 }

@@ -3,10 +3,10 @@ package offerings
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
+	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 )
 
@@ -34,18 +34,23 @@ func NewDepartmentsScraper(institute string) DepartmentsScraper {
 	}
 }
 
-func (sc DepartmentsScraper) Start() (db.Writer, error) {
-	URL := fmt.Sprintf(sc.DepartmentsURLMask, sc.Institute)
-	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
-}
+func (sc *DepartmentsScraper) Process() func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		URL := fmt.Sprintf(sc.DepartmentsURLMask, sc.Institute)
 
-func (sc DepartmentsScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
-	dec := json.NewDecoder(reader)
+		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-	var deps DepartmentsList
-	if err := dec.Decode(&deps); err != nil {
-		return nil, err
+		dec := json.NewDecoder(reader)
+
+		var deps DepartmentsList
+		if err := dec.Decode(&deps); err != nil {
+			return nil, err
+		}
+
+		return deps, nil
 	}
-
-	return deps, nil
 }

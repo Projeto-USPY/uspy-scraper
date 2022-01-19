@@ -1,15 +1,15 @@
 package courses
 
 import (
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
 )
@@ -34,58 +34,64 @@ func NewSubjectScraper(subject, course, spec string) SubjectScraper {
 	}
 }
 
-func (sc SubjectScraper) Start() (db.Writer, error) {
-	URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.CourseCode, sc.Specialization)
-	return scraper.Start(sc, URL, http.MethodGet, nil, nil, true)
-}
+func getRequirements(period, rows *goquery.Selection, optional bool, subject *models.Subject) error {
+	requirementLists := make(map[string][]models.Requirement)
+	requirements := []models.Requirement{}
+	groupIndex := 0
 
-func (sc SubjectScraper) Scrape(reader io.Reader) (db.Writer, error) {
-	doc, err := goquery.NewDocumentFromReader(reader)
-	if err != nil {
-		return nil, err
+	// Get requirements of subject
+	for l := 0; l < rows.Length(); l++ {
+		row := rows.Eq(l)
+
+		if row.Has("b").Length() > 0 { // "row" is an "or"
+			groupIndex++
+			requirementLists[strconv.Itoa(groupIndex)] = requirements
+			requirements = []models.Requirement{}
+		} else if row.Has(".txt_arial_8pt_red").Length() > 0 { // "row" is an actual requirement
+			reqText := row.Children().Eq(0).Text()
+			strongText := row.Children().Eq(1).Text()
+
+			reqSplitText := strings.SplitN(reqText, "-", 2)
+			if len(reqSplitText) < 2 {
+				return errors.New("couldn't parse requirement")
+			}
+
+			reqCode, reqName := strings.TrimSpace(reqSplitText[0]), strings.TrimSpace(reqSplitText[1])
+
+			if strings.Contains(strongText, "Requisito") {
+				requirements = append(requirements, models.Requirement{
+					Subject: reqCode,
+					Name:    reqName,
+					Strong:  !strings.Contains(strongText, "fraco"),
+				})
+			}
+
+		} else { // "row" is an empty <tr>
+			break
+		}
 	}
 
-	fullName := doc.Find("span.txt_arial_10pt_black > b").Text()
-	fields := strings.SplitN(fullName, "-", 2)
-	name := strings.TrimSpace(fields[1])
-
-	subject := models.Subject{
-		Code:           sc.Code,
-		CourseCode:     sc.CourseCode,
-		Specialization: sc.Specialization,
-		Name:           name,
-		Stats: map[string]int{
-			"total":    0,
-			"worth_it": 0,
-		},
+	if len(requirements) > 0 {
+		groupIndex++
+		requirementLists[strconv.Itoa(groupIndex)] = requirements
 	}
 
-	if description, err := getDescription(doc); err == nil {
-		subject.Description = description
-	} else {
-		return nil, err
+	subject.Requirements = requirementLists
+	subject.Optional = optional
+	subject.Semester, _ = strconv.Atoi(strings.Split(period.Find(".txt_arial_8pt_black").Text(), "º")[0])
+	subject.TrueRequirements = make([]models.Requirement, 0)
+
+	count := make(map[string]int)
+	for _, group := range subject.Requirements {
+		for _, s := range group {
+			count[s.Subject]++
+			if count[s.Subject] == len(subject.Requirements) {
+				subject.TrueRequirements = append(subject.TrueRequirements, s)
+			}
+		}
 	}
 
-	search := doc.Find("tr[valign=\"TOP\"][align=\"LEFT\"] > td > font > span[class=\"txt_arial_8pt_gray\"]")
-	if class, err := getClassCredits(search); err == nil {
-		subject.ClassCredits = class
-	} else {
-		return nil, err
-	}
-
-	if assign, err := getAssignCredits(search); err == nil {
-		subject.AssignCredits = assign
-	} else {
-		return nil, err
-	}
-
-	if total, err := getTotalHours(search); err == nil {
-		subject.TotalHours = total
-	} else {
-		return nil, err
-	}
-
-	return subject, nil
+	return nil
 }
 
 func getDescription(doc *goquery.Document) (string, error) {
@@ -143,4 +149,65 @@ func getTotalHours(search *goquery.Selection) (string, error) {
 
 	total := space.ReplaceAllString(totalHours, " ")
 	return total, nil
+}
+
+func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool) func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.CourseCode, sc.Specialization)
+
+		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
+
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		doc, err := goquery.NewDocumentFromReader(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		fullName := doc.Find("span.txt_arial_10pt_black > b").Text()
+		fields := strings.SplitN(fullName, "-", 2)
+		name := strings.TrimSpace(fields[1])
+
+		subject := models.Subject{
+			Code:           sc.Code,
+			CourseCode:     sc.CourseCode,
+			Specialization: sc.Specialization,
+			Name:           name,
+			Stats: map[string]int{
+				"total":    0,
+				"worth_it": 0,
+			},
+		}
+
+		if description, err := getDescription(doc); err == nil {
+			subject.Description = description
+		} else {
+			return nil, err
+		}
+
+		search := doc.Find("tr[valign=\"TOP\"][align=\"LEFT\"] > td > font > span[class=\"txt_arial_8pt_gray\"]")
+		if class, err := getClassCredits(search); err == nil {
+			subject.ClassCredits = class
+		} else {
+			return nil, err
+		}
+
+		if assign, err := getAssignCredits(search); err == nil {
+			subject.AssignCredits = assign
+		} else {
+			return nil, err
+		}
+
+		if total, err := getTotalHours(search); err == nil {
+			subject.TotalHours = total
+		} else {
+			return nil, err
+		}
+
+		getRequirements(period, rows, optional, &subject)
+		return subject, nil
+	}
 }

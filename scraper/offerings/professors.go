@@ -3,14 +3,16 @@ package offerings
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
+	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 )
 
@@ -46,76 +48,114 @@ func NewProfessorScraper(institute string) ProfessorScraper {
 	}
 }
 
-func (sc ProfessorScraper) Start() (db.Writer, error) {
-	// get departments
-	log.Println("getting departments for institute", sc.Institute)
+func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		// preprocess by getting institute departments
+		depScraper := NewDepartmentsScraper(sc.Institute)
+		callback := depScraper.Process()
 
-	depScraper := NewDepartmentsScraper(sc.Institute)
-	depResults, err := depScraper.Start()
+		departments, err := callback()
+		if err != nil {
+			return ProfessorScraper{}, err
+		}
 
-	if err != nil {
-		return nil, err
-	}
+		professorTasks := make([]*processor.Task, 0)
 
-	var inst models.Institute
-	exists := make(map[string]struct{}) // set to check if this professor was already scraped
-
-	for _, dep := range depResults.(DepartmentsList) {
-		log.Println("scrapping department", dep.Department)
-		for _, citationsType := range sc.Types {
-			URL := fmt.Sprintf(sc.ProfessorsURLMask, sc.Institute, dep.Department, sc.Begin, sc.End, citationsType)
-			profResults, err := scraper.Start(sc, URL, http.MethodGet, nil, nil, false)
-			if err != nil {
-				return nil, err
-			}
-
-			// append results to institute object
-			for _, prof := range profResults.(models.Institute).Professors {
-				if _, ok := exists[prof.CodPes]; ok {
-					continue
-				}
-
-				exists[prof.CodPes] = struct{}{}
-				inst.Professors = append(inst.Professors, prof)
-
-				if len(prof.Offerings) == 0 {
-					log.Println("found no offerings for professor", prof.CodPes, prof.Name)
-				}
+		for _, dep := range departments.(DepartmentsList) {
+			log.Debugln("scrapping department", dep.Department)
+			for _, citationsType := range sc.Types {
+				professorTasks = append(professorTasks, processor.NewTask(
+					fmt.Sprintf(
+						"[professor-task] %s:%s",
+						dep.Department,
+						citationsType,
+					),
+					processor.QuadraticDelay,
+					sc.ScrapeProfessor(dep.Department, citationsType),
+					nil,
+				))
 			}
 		}
-	}
 
-	return inst, nil
+		proc := processor.NewProcessor(
+			fmt.Sprintf("[professor-processor] %s", sc.Institute),
+			professorTasks,
+			processor.Config.Processor.NumWorkers,
+			processor.Config.Processor.MaxAttempts,
+			processor.Config.Processor.Timeout,
+		)
+
+		depResults := proc.Run()
+		offeringTasks := make([]*processor.Task, 0)
+
+		for _, department := range depResults {
+			for _, prof := range department.(ProfessorsList) {
+				uraniaScraper := NewUraniaScraper(prof.Code.String(), "2015", prof.Name)
+				offeringTasks = append(offeringTasks, processor.NewTask(
+					fmt.Sprintf(
+						"[offering-task] %s:%s",
+						prof.Code,
+						strings.ReplaceAll(strings.ToLower(prof.Name), " ", "_"),
+					),
+					processor.QuadraticDelay,
+					uraniaScraper.Process(),
+					nil,
+				))
+			}
+
+		}
+
+		proc = processor.NewProcessor(
+			fmt.Sprintf("[offerings-processor] %s", sc.Institute),
+			offeringTasks,
+			processor.Config.Processor.NumWorkers,
+			processor.Config.Processor.MaxAttempts,
+			processor.Config.Processor.Timeout,
+		)
+
+		profs := proc.Run()
+
+		// append results to institute object
+		var inst models.Institute
+		exists := make(map[string]struct{}) // set to check if this professor was already scraped
+
+		for _, prof := range profs {
+			professor := prof.(models.Professor)
+			if _, ok := exists[professor.CodPes]; ok {
+				continue
+			}
+
+			exists[professor.CodPes] = struct{}{}
+			inst.Professors = append(inst.Professors, professor)
+
+			if len(professor.Offerings) == 0 {
+				log.Warnln("found no offerings for professor", professor.CodPes, professor.Name)
+			}
+		}
+
+		log.Infof("collected institute %s, num professors: %d\n", inst.Code, len(profs))
+		return inst, nil
+	}
 }
 
-func (sc ProfessorScraper) Scrape(reader io.Reader) (obj db.Writer, err error) {
-	dec := json.NewDecoder(reader)
-
-	var profs ProfessorsList
-
-	if err := dec.Decode(&profs); err != nil {
-		return nil, err
-	}
-
-	var inst models.Institute
-	exists := make(map[string]struct{}) // set to check if this professor was already scraped
-
-	for _, prof := range profs {
-		if _, ok := exists[prof.Code.String()]; ok {
-			continue
-		}
-
-		exists[prof.Code.String()] = struct{}{}
-
-		uraniaSc := NewUraniaScraper(prof.Code.String(), "2015", prof.Name)
-		result, err := uraniaSc.Start()
+func (sc *ProfessorScraper) ScrapeProfessor(department json.Number, citationsType string) func() (processor.Processed, error) {
+	return func() (processor.Processed, error) {
+		URL := fmt.Sprintf(sc.ProfessorsURLMask, sc.Institute, department, sc.Begin, sc.End, citationsType)
+		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, false)
 
 		if err != nil {
 			return nil, err
 		}
+		defer resp.Body.Close()
 
-		inst.Professors = append(inst.Professors, result.(models.Professor))
+		dec := json.NewDecoder(reader)
+
+		var profs ProfessorsList
+
+		if err := dec.Decode(&profs); err != nil {
+			return nil, err
+		}
+
+		return profs, nil
 	}
-
-	return inst, nil
 }
