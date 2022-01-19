@@ -23,9 +23,7 @@ func CollectOfferings(DB db.Env, queryParams map[string][]string) {
 				updateOfferingsData(DB),
 			),
 		},
-		processor.Config.Processor.NumWorkers,
-		processor.Config.Processor.MaxAttempts,
-		processor.Config.Processor.Timeout,
+		true,
 	).Run()
 }
 

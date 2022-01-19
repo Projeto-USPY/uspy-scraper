@@ -95,9 +95,7 @@ func (sc *JupiterScraper) Process() func() (processor.Processed, error) {
 				institute.Code,
 			),
 			courseTasks,
-			processor.Config.Processor.NumWorkers,
-			processor.Config.Processor.MaxAttempts,
-			processor.Config.Processor.Timeout,
+			true,
 		)
 
 		results := proc.Run()

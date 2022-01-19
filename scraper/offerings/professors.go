@@ -80,9 +80,7 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 		proc := processor.NewProcessor(
 			fmt.Sprintf("[professor-processor] %s", sc.Institute),
 			professorTasks,
-			processor.Config.Processor.NumWorkers,
-			processor.Config.Processor.MaxAttempts,
-			processor.Config.Processor.Timeout,
+			true,
 		)
 
 		depResults := proc.Run()
@@ -108,9 +106,7 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 		proc = processor.NewProcessor(
 			fmt.Sprintf("[offerings-processor] %s", sc.Institute),
 			offeringTasks,
-			processor.Config.Processor.NumWorkers,
-			processor.Config.Processor.MaxAttempts,
-			processor.Config.Processor.Timeout,
+			true,
 		)
 
 		profs := proc.Run()

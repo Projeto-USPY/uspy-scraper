@@ -95,9 +95,7 @@ func (sc *ICMCPeopleScraper) Process() func() (processor.Processed, error) {
 		proc := processor.NewProcessor(
 			"[icmc-people-processor]",
 			offeringTasks,
-			processor.Config.Processor.NumWorkers,
-			processor.Config.Processor.MaxAttempts,
-			processor.Config.Processor.Timeout,
+			true,
 		)
 
 		results := proc.Run()

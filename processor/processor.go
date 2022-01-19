@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -55,13 +56,23 @@ func NewTask(
 	}
 }
 
-func NewProcessor(name string, tasks []*Task, numWorkers, maxAttempts int, timeout int) *Processor {
+func NewProcessor(name string, tasks []*Task, fixedAttempts bool) *Processor {
+	numWorkers := Config.Processor.NumWorkers
+	if Config.Processor.FractionalNumWorkers > 0.0 && Config.Processor.FractionalNumWorkers <= 1.0 {
+		numWorkers = int(math.Ceil(float64(len(tasks)) * Config.Processor.FractionalNumWorkers))
+	}
+
+	maxAttempts := -1
+	if fixedAttempts {
+		maxAttempts = Config.Processor.MaxAttempts
+	}
+
 	return &Processor{
 		Name:        name,
 		Tasks:       tasks,
 		NumWorkers:  numWorkers,
 		MaxAttempts: maxAttempts,
-		Timeout:     timeout,
+		Timeout:     Config.Processor.Timeout,
 
 		jobs:    make(chan *Task, len(tasks)),
 		results: make(chan Processed, len(tasks)),

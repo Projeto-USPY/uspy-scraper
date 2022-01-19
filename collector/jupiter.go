@@ -19,9 +19,7 @@ func CollectJupiter(DB db.Env, queryParams map[string][]string) {
 				updateSubjectData(DB),
 			),
 		},
-		processor.Config.Processor.NumWorkers,
-		processor.Config.Processor.MaxAttempts,
-		processor.Config.Processor.Timeout,
+		true,
 	).Run()
 }
 

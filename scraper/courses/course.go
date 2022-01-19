@@ -115,9 +115,7 @@ func (cs *CourseScraper) Process() func() (processor.Processed, error) {
 				strings.ToLower(course.Name),
 			),
 			subjectTasks,
-			processor.Config.Processor.NumWorkers,
-			processor.Config.Processor.MaxAttempts,
-			processor.Config.Processor.Timeout,
+			true,
 		)
 
 		results := proc.Run()
