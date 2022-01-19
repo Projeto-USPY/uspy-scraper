@@ -97,6 +97,10 @@ func (proc *Processor) Run() []Processed {
 	log.Debugf("launching %s: %v workers for %v tasks\n", proc.Name, proc.NumWorkers, len(proc.Tasks))
 	init := time.Now()
 
+	defer close(proc.jobs)
+	defer close(proc.results)
+	defer close(proc.failed)
+
 	// prepare workers
 	for i := 0; i < proc.NumWorkers; i++ {
 		go func(ctx context.Context) {
@@ -161,9 +165,20 @@ func (proc *Processor) Run() []Processed {
 		}
 	}()
 
+	// receive job results
+	results := make([]Processed, 0)
+	failures := make([]*Task, 0)
+
 	// wait for all jobs to fail, succeed or timeout
 	for {
-		if ctx.Err() != nil || len(proc.results)+len(proc.failed) == len(proc.Tasks) {
+		select {
+		case result := <-proc.results:
+			results = append(results, result)
+		case failure := <-proc.failed:
+			failures = append(failures, failure)
+		}
+
+		if ctx.Err() != nil || len(results)+len(failures) == len(proc.Tasks) {
 			cancel()
 			break
 		}
@@ -177,23 +192,14 @@ func (proc *Processor) Run() []Processed {
 
 	log.Infof("time elapsed: %v\n", time.Since(init))
 
-	close(proc.results)
-	close(proc.failed)
-	close(proc.jobs)
-
 	if len(proc.failed) > 0 {
 		log.Warnln(len(proc.failed), "jobs failed")
 
-		for failedJob := range proc.failed {
+		for _, failedJob := range failures {
 			if failedJob.err != nil {
 				log.Errorf("[failed] job: %s, reason: %s\n", failedJob.Name, failedJob.err.Error())
 			}
 		}
-	}
-
-	results := make([]Processed, 0)
-	for result := range proc.results {
-		results = append(results, result)
 	}
 
 	return results
