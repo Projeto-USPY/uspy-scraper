@@ -109,6 +109,10 @@ func (proc *Processor) Run() []Processed {
 				case <-ctx.Done():
 					return
 				case job := <-proc.jobs:
+					log.WithFields(log.Fields{
+						"agent": proc.Name,
+						"job":   job.Name,
+					}).Debugln("working")
 					// fail job if exceeded retries
 					if proc.MaxAttempts != -1 && job.currentAttempt > proc.MaxAttempts {
 						proc.failed <- job
@@ -185,12 +189,12 @@ func (proc *Processor) Run() []Processed {
 	}
 
 	if errors.Is(ctx.Err(), context.Canceled) {
-		log.Infof("%s: work is done, stopping...", proc.Name)
+		log.WithField("agent", proc.Name).Infof("work is done, stopping...")
 	} else if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		log.Infof("%s: timeout exceeded, stopping...", proc.Name)
+		log.WithField("agent", proc.Name).Infof("timeout exceeded, stopping...")
 	}
 
-	log.Infof("time elapsed: %v\n", time.Since(init))
+	log.WithField("agent", proc.Name).Infof("time elapsed: %v\n", time.Since(init))
 
 	if len(proc.failed) > 0 {
 		log.Warnln(len(proc.failed), "jobs failed")

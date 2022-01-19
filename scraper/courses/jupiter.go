@@ -10,7 +10,6 @@ import (
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -104,7 +103,6 @@ func (sc *JupiterScraper) Process() func() (processor.Processed, error) {
 			institute.Courses = append(institute.Courses, course.(models.Course))
 		}
 
-		log.Infof("collected %s with num courses: %d\n", institute.Name, len(institute.Courses))
 		return institute, nil
 
 	}

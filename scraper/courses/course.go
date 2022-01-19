@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
@@ -128,7 +126,6 @@ func (cs *CourseScraper) Process() func() (processor.Processed, error) {
 			course.SubjectCodes[s.Code] = s.Name
 		}
 
-		log.Infof("collected %s with num subjects: %d\n", course.Name, len(course.Subjects))
 		return course, nil
 	}
 }

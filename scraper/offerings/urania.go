@@ -8,7 +8,6 @@ import (
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
-	log "github.com/sirupsen/logrus"
 )
 
 type UraniaOffering struct {
@@ -103,7 +102,6 @@ func (sc *UraniaScraper) Process() func() (processor.Processed, error) {
 			Offerings: offs,
 		}
 
-		log.Infof("collected professor %s, num offerings: %d\n", sc.ProfessorName, len(offs))
 		return prof, nil
 	}
 }
