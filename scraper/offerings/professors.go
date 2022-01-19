@@ -54,15 +54,15 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 		depScraper := NewDepartmentsScraper(sc.Institute)
 		callback := depScraper.Process()
 
-		departments, err := callback()
+		results, err := callback()
 		if err != nil {
-			return ProfessorScraper{}, err
+			return nil, err
 		}
 
+		departments := results.(DepartmentsList)
 		professorTasks := make([]*processor.Task, 0)
 
-		for _, dep := range departments.(DepartmentsList) {
-			log.Debugln("scrapping department", dep.Department)
+		for _, dep := range departments {
 			for _, citationsType := range sc.Types {
 				professorTasks = append(professorTasks, processor.NewTask(
 					fmt.Sprintf(
@@ -88,7 +88,8 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 
 		for _, department := range depResults {
 			for _, prof := range department.(ProfessorsList) {
-				uraniaScraper := NewUraniaScraper(prof.Code.String(), "2015", prof.Name)
+				year := "2015"
+				uraniaScraper := NewUraniaScraper(prof.Code.String(), year, prof.Name)
 				offeringTasks = append(offeringTasks, processor.NewTask(
 					fmt.Sprintf(
 						"[offering-task] %s:%s",
@@ -129,7 +130,6 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 			}
 		}
 
-		log.Infof("collected institute %s, num professors: %d\n", inst.Code, len(profs))
 		return inst, nil
 	}
 }
