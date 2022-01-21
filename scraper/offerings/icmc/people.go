@@ -1,6 +1,7 @@
 package icmc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -32,8 +33,8 @@ func NewICMCPeopleScraper(body map[string]string) ICMCPeopleScraper {
 	}
 }
 
-func (sc *ICMCPeopleScraper) Process() func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (sc *ICMCPeopleScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		data := url.Values{}
 		for k, v := range sc.Body {
 			data.Set(k, v)
@@ -93,6 +94,7 @@ func (sc *ICMCPeopleScraper) Process() func() (processor.Processed, error) {
 		}
 
 		proc := processor.NewProcessor(
+			ctx,
 			"[icmc-people-processor]",
 			offeringTasks,
 			true,

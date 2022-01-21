@@ -1,6 +1,7 @@
 package offerings
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -48,8 +49,8 @@ func NewProfessorScraper(institute string) ProfessorScraper {
 	}
 }
 
-func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		// preprocess by getting institute departments
 		depScraper := NewDepartmentsScraper(sc.Institute)
 		callback := depScraper.Process()
@@ -78,6 +79,7 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 		}
 
 		proc := processor.NewProcessor(
+			ctx,
 			fmt.Sprintf("[professor-processor] %s", sc.Institute),
 			professorTasks,
 			true,
@@ -105,6 +107,7 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 		}
 
 		proc = processor.NewProcessor(
+			ctx,
 			fmt.Sprintf("[offerings-processor] %s", sc.Institute),
 			offeringTasks,
 			true,
@@ -134,8 +137,8 @@ func (sc *ProfessorScraper) Process() func() (processor.Processed, error) {
 	}
 }
 
-func (sc *ProfessorScraper) ScrapeProfessor(department json.Number, citationsType string) func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (sc *ProfessorScraper) ScrapeProfessor(department json.Number, citationsType string) func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		URL := fmt.Sprintf(sc.ProfessorsURLMask, sc.Institute, department, sc.Begin, sc.End, citationsType)
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, false)
 

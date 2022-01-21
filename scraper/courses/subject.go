@@ -1,6 +1,7 @@
 package courses
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -151,8 +152,8 @@ func getTotalHours(search *goquery.Selection) (string, error) {
 	return total, nil
 }
 
-func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool) func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool) func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.CourseCode, sc.Specialization)
 
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)

@@ -1,6 +1,7 @@
 package offerings
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -42,8 +43,8 @@ func NewUraniaScraper(code, since, name string) UraniaScraper {
 	}
 }
 
-func (sc *UraniaScraper) Process() func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (sc *UraniaScraper) Process() func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.Since)
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
 
