@@ -1,9 +1,8 @@
 package collector
 
 import (
-	"sync"
-
-	log "github.com/sirupsen/logrus"
+	"context"
+	"fmt"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
@@ -12,86 +11,86 @@ import (
 )
 
 func CollectOfferings(
+	ctx context.Context,
 	DB db.Env,
 	queryParams map[string][]string,
-	afterCallback func(db.Env) func(results processor.Processed) error,
+	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
 ) {
 	scraper := offerings.NewProfessorScraper(queryParams["institute"][0])
 	processor.NewProcessor(
+		DB.Ctx,
 		"[offerings-processor]",
 		[]*processor.Task{
 			processor.NewTask(
 				"offerings-task",
 				processor.QuadraticDelay,
-				scraper.Process(),
-				afterCallback(DB),
+				scraper.Process(ctx),
+				afterCallback(ctx, DB),
 			),
 		},
 		true,
 	).Run()
 }
 
-func setOfferingsData(DB db.Env) func(results processor.Processed) error {
-	return func(result processor.Processed) error {
-		objects := make([]db.BatchObject, 0, 500)
-		errors := make(chan error)
-		cnt := 0
+func queryProcessor(
+	ctx context.Context,
+	DB db.Env,
+	off models.Offering,
+) func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
+		results := DB.Client.Collection("subjects").Where("code", "==", off.Code).Documents(ctx)
+		if snaps, err := results.GetAll(); err != nil {
+			return nil, err
+		} else {
+			objects := make([]db.BatchObject, 0, len(snaps))
+			for _, d := range snaps {
+				id := d.Ref.ID
+				objects = append(objects, db.BatchObject{
+					Collection: "subjects/" + id + "/offerings",
+					Doc:        off.Hash(),
+					WriteData:  off,
+				})
+			}
 
+			return objects, nil
+		}
+	}
+}
+
+func setOfferingsData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
+	return func(_ context.Context, result processor.Processed) error {
+		queryTasks := make([]*processor.Task, 0)
 		for _, p := range result.(models.Institute).Professors {
-			log.Debugln("creating offering objects from professor", p.Name)
-			subjectPaths := make(map[string]struct{})
-			cnt += len(p.Offerings)
-			var mutex sync.Mutex
-
 			for _, off := range p.Offerings {
-				go func(off models.Offering) {
-					mutex.Lock()
-					_, ok := subjectPaths[off.Code]
-					mutex.Unlock()
-
-					if !ok {
-						// query all subjects with given subject code
-						results := DB.Client.Collection("subjects").Where("code", "==", off.Code).Documents(DB.Ctx)
-						snaps, err := results.GetAll()
-						errors <- err
-
-						if err == nil {
-							for _, d := range snaps {
-								id := d.Ref.ID
-
-								mutex.Lock()
-								objects = append(objects, db.BatchObject{
-									Collection: "subjects/" + id + "/offerings",
-									Doc:        off.Hash(),
-									WriteData:  off,
-								})
-								mutex.Unlock()
-
-							}
-
-							mutex.Lock()
-							subjectPaths[off.Code] = struct{}{} // mark subject as inserted
-							mutex.Unlock()
-						}
-					}
-				}(off)
+				queryTasks = append(queryTasks, processor.NewTask(
+					fmt.Sprintf("[offering-query-task] %s:%s", p.CodPes, off.Code),
+					processor.QuadraticDelay,
+					queryProcessor(ctx, DB, off),
+					nil,
+				))
 			}
 		}
 
-		for i := 0; i < cnt; i++ {
-			if err := <-errors; err != nil {
-				return err
-			}
+		results := processor.NewProcessor(
+			ctx,
+			"[offering-processor]",
+			queryTasks,
+			true,
+		).Run()
+
+		objects := make([]db.BatchObject, 0, len(results))
+		for _, batch := range results {
+			objects = append(objects, batch.([]db.BatchObject)...)
 		}
 
 		return DB.BatchWrite(objects)
 	}
 }
 
-func BuildOfferingsData(DB db.Env) func(results processor.Processed) error {
-	return setOfferingsData(DB)
+func BuildOfferingsData(ctx context.Context, DB db.Env) func(context.Context, processor.Processed) error {
+	return setOfferingsData(ctx, DB)
 }
 
-func UpdateOfferingsData(DB db.Env) func(results processor.Processed) error {
-	return setOfferingsData(DB)
+func UpdateOfferingsData(ctx context.Context, DB db.Env) func(context.Context, processor.Processed) error {
+	return setOfferingsData(ctx, DB)
 }
