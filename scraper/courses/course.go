@@ -1,6 +1,7 @@
 package courses
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,19 +25,21 @@ type CourseScraper struct {
 	InstituteCode  string
 	Code           string
 	Specialization string
+	Shift          string
 }
 
-func NewCourseScraper(institute, course, spec string) CourseScraper {
+func NewCourseScraper(institute, course, spec, shift string) CourseScraper {
 	return CourseScraper{
 		URLMask:        DefaultCourseURLMask,
 		Code:           course,
 		Specialization: spec,
+		Shift:          shift,
 		InstituteCode:  institute,
 	}
 }
 
-func (cs *CourseScraper) Process() func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		URL := fmt.Sprintf(cs.URLMask, cs.InstituteCode, cs.Code, cs.Specialization)
 
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
@@ -55,6 +58,7 @@ func (cs *CourseScraper) Process() func() (processor.Processed, error) {
 			Name:           doc.Find("td > font:nth-child(2) > span").Last().Text(),
 			Code:           cs.Code,
 			Specialization: cs.Specialization,
+			Shift:          cs.Shift,
 			Subjects:       make([]models.Subject, 0, 1000),
 			SubjectCodes:   make(map[string]string),
 		}
@@ -108,6 +112,7 @@ func (cs *CourseScraper) Process() func() (processor.Processed, error) {
 		}
 
 		proc := processor.NewProcessor(
+			context.Background(),
 			fmt.Sprintf(
 				"[subject-processor] %s",
 				strings.ToLower(course.Name),

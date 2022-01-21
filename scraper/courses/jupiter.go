@@ -1,6 +1,8 @@
 package courses
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -10,6 +12,7 @@ import (
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -45,8 +48,8 @@ func getCourseIdentifiers(node *goquery.Selection) (string, string, error) {
 	}
 }
 
-func (sc *JupiterScraper) Process() func() (processor.Processed, error) {
-	return func() (processor.Processed, error) {
+func (sc *JupiterScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
+	return func(context.Context) (processor.Processed, error) {
 		URL := fmt.Sprintf(sc.URLMask, sc.Code)
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
 		if err != nil {
@@ -67,19 +70,37 @@ func (sc *JupiterScraper) Process() func() (processor.Processed, error) {
 
 		courseTasks := make([]*processor.Task, 0)
 
-		coursesHref := doc.Find("td[valign=\"top\"] a.link_gray")
-		for i := 0; i < coursesHref.Length(); i++ {
+		courses := doc.Find(`td[valign="top"] > font > span`)
+		if courses.Length()%2 != 0 { // odd is unexpected because each course should have a shift
+			log.WithFields(log.Fields{
+				"institute": sc.Code,
+			}).Errorf("can't scrape institute, for some reason there's not a shift for each course")
+			return nil, errors.New("can't scrape institute, for some reason there's not a shift for each course")
+		}
+
+		for i := 0; i < courses.Length(); i += 2 {
 			// follow every course href
-			node := coursesHref.Eq(i)
-			if courseCode, courseSpec, err := getCourseIdentifiers(node); err != nil {
+			courseNode := courses.Eq(i).Find("a.link_gray")
+			shift := courses.Eq(i + 1).Text()
+			cleanShift := strings.Trim(shift, " \n\t")
+
+			if len(cleanShift) == 0 {
+				log.WithFields(log.Fields{
+					"institute": sc.Code,
+				}).Errorf("can't scrape institute, for some reason there's a couse with an empty shift")
+				return nil, errors.New("course shift is empty")
+			}
+
+			if courseCode, courseSpec, err := getCourseIdentifiers(courseNode); err != nil {
 				return nil, err
 			} else {
-				courseScraper := NewCourseScraper(sc.Code, courseCode, courseSpec)
+				courseScraper := NewCourseScraper(sc.Code, courseCode, courseSpec, cleanShift)
 				courseTasks = append(courseTasks, processor.NewTask(
 					fmt.Sprintf(
-						"[course-task] %s:%s",
+						"[course-task] %s:%s:%s",
 						institute.Code,
 						courseCode,
+						cleanShift,
 					),
 					processor.QuadraticDelay,
 					courseScraper.Process(),
@@ -89,6 +110,7 @@ func (sc *JupiterScraper) Process() func() (processor.Processed, error) {
 		}
 
 		proc := processor.NewProcessor(
+			ctx,
 			fmt.Sprintf(
 				"[institute-processor] %s",
 				institute.Code,
