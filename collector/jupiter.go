@@ -9,6 +9,7 @@ import (
 	firestoreUtils "github.com/Projeto-USPY/uspy-backend/entity/models/utils"
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper/courses"
+	log "github.com/sirupsen/logrus"
 )
 
 func CollectJupiter(
@@ -17,54 +18,57 @@ func CollectJupiter(
 	queryParams map[string][]string,
 	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
 ) {
-	scraper := courses.NewJupiterScraper(queryParams["institute"][0])
+	scraper := courses.NewJupiterScraper(parseInstitutesFromQuery(queryParams)...)
 	processor.NewProcessor(
 		ctx,
 		"[jupiter-processor]",
 		[]*processor.Task{
 			processor.NewTask(
-				"jupiter-task",
+				"[jupiter-task]",
 				processor.QuadraticDelay,
 				scraper.Process(ctx),
 				afterCallback(ctx, DB),
 			),
 		},
 		true,
+		true,
 	).Run()
 }
 
 func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(context.Context, processor.Processed) error {
-	return func(_ context.Context, result processor.Processed) error {
-		var institute = result.(models.Institute)
-		objs := make([]db.BatchObject, 0)
+	return func(_ context.Context, results processor.Processed) error {
+		objects := make([]db.BatchObject, 0)
 
-		for _, course := range institute.Courses {
-			for _, sub := range course.Subjects {
-				if excludeStats {
-					objs = append(objs, db.BatchObject{
-						Collection: "subjects",
-						Doc:        sub.Hash(),
-						WriteData:  sub,
-						SetOptions: []firestore.SetOption{firestoreUtils.MergeWithout(sub, "stats")},
-					})
-				} else {
-					objs = append(objs, db.BatchObject{
-						Collection: "subjects",
-						Doc:        sub.Hash(),
-						WriteData:  sub,
-					})
+		for _, institute := range results.([]processor.Processed) {
+			for _, course := range institute.(models.Institute).Courses {
+				for _, sub := range course.Subjects {
+					if excludeStats {
+						objects = append(objects, db.BatchObject{
+							Collection: "subjects",
+							Doc:        sub.Hash(),
+							WriteData:  sub,
+							SetOptions: []firestore.SetOption{firestoreUtils.MergeWithout(sub, "stats")},
+						})
+					} else {
+						objects = append(objects, db.BatchObject{
+							Collection: "subjects",
+							Doc:        sub.Hash(),
+							WriteData:  sub,
+						})
+					}
 				}
-			}
 
-			objs = append(objs, db.BatchObject{
-				Collection: "courses",
-				Doc:        course.Hash(),
-				WriteData:  course},
-			)
+				objects = append(objects, db.BatchObject{
+					Collection: "courses",
+					Doc:        course.Hash(),
+					WriteData:  course},
+				)
+			}
 		}
 
 		DB.Ctx = ctx // super hacky, but it works for now
-		return DB.BatchWrite(objs)
+		log.Infof("batch writing subject objects, total: %d", len(objects))
+		return DB.BatchWrite(objects)
 	}
 }
 

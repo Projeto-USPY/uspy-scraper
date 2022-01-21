@@ -97,7 +97,8 @@ func (sc *ICMCPeopleScraper) Process(ctx context.Context) func(context.Context) 
 			ctx,
 			"[icmc-people-processor]",
 			offeringTasks,
-			true,
+			processor.Config.FixedAttempts,
+			processor.Config.DelayAttempts,
 		)
 
 		results := proc.Run()

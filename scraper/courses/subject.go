@@ -20,18 +20,24 @@ var (
 )
 
 type SubjectScraper struct {
-	URLMask        string
+	URLMask string
+
 	Code           string
 	CourseCode     string
 	Specialization string
+
+	fallbackURL string
 }
 
-func NewSubjectScraper(subject, course, spec string) SubjectScraper {
+func NewSubjectScraper(subject, course, spec, fallbackURL string) SubjectScraper {
 	return SubjectScraper{
 		URLMask:        DefaultSubjectURLMask,
 		Code:           subject,
 		CourseCode:     course,
 		Specialization: spec,
+
+		// this is stupid, only done this way cause some subjects have different URLs that differ from their hash!
+		fallbackURL: fallbackURL,
 	}
 }
 
@@ -157,10 +163,18 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 		URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.CourseCode, sc.Specialization)
 
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			// try using fallback URL
+			fallbackResp, fallbackReader, fallbackErr := scraper.Fetch(sc.fallbackURL, http.MethodGet, nil, nil, true)
 
-		if err != nil {
-			return nil, err
+			if fallbackErr != nil {
+				return nil, err
+			}
+
+			resp = fallbackResp
+			reader = fallbackReader
 		}
+
 		defer resp.Body.Close()
 
 		doc, err := goquery.NewDocumentFromReader(reader)

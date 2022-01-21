@@ -90,13 +90,16 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 					rows := subjectNode.NextUntilSelection(subjects.Union(periods).Union(sections))
 
 					subjectObj := subjectNode.Find("a")
-					subjectScraper := NewSubjectScraper(strings.TrimSpace(subjectObj.Text()), course.Code, course.Specialization)
+					subjectCode := strings.TrimSpace(subjectObj.Text())
+					fallbackURL := subjectObj.AttrOr("href", "none")
+
+					subjectScraper := NewSubjectScraper(subjectCode, course.Code, course.Specialization, fallbackURL)
 
 					// create subject task
 					subjectTasks = append(subjectTasks, processor.NewTask(
 						fmt.Sprintf( // task id = subject:course:specialization
 							"[subject-task] %s:%s:%s",
-							strings.TrimSpace(subjectObj.Text()),
+							subjectCode,
 							course.Code,
 							course.Specialization,
 						),
@@ -118,7 +121,8 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 				strings.ToLower(course.Name),
 			),
 			subjectTasks,
-			true,
+			processor.Config.FixedAttempts,
+			processor.Config.DelayAttempts,
 		)
 
 		results := proc.Run()

@@ -29,9 +29,10 @@ type (
 		Name  string
 		Tasks []*Task
 
-		numWorkers  int
-		maxAttempts int
-		timeout     int
+		numWorkers    int
+		maxAttempts   int
+		timeout       int
+		delayAttempts bool
 
 		ctx     context.Context
 		jobs    chan *Task
@@ -58,23 +59,24 @@ func NewTask(
 	}
 }
 
-func NewProcessor(ctx context.Context, name string, tasks []*Task, fixedAttempts bool) *Processor {
-	numWorkers := Config.Processor.NumWorkers
-	if Config.Processor.FractionalNumWorkers > 0.0 && Config.Processor.FractionalNumWorkers <= 1.0 {
-		numWorkers = int(math.Ceil(float64(len(tasks)) * Config.Processor.FractionalNumWorkers))
+func NewProcessor(ctx context.Context, name string, tasks []*Task, fixedAttempts, delayAttempts bool) *Processor {
+	numWorkers := Config.NumWorkers
+	if Config.FractionalNumWorkers > 0.0 && Config.FractionalNumWorkers <= 1.0 {
+		numWorkers = int(math.Ceil(float64(len(tasks)) * Config.FractionalNumWorkers))
 	}
 
 	maxAttempts := -1
 	if fixedAttempts {
-		maxAttempts = Config.Processor.MaxAttempts
+		maxAttempts = Config.MaxAttempts
 	}
 
 	return &Processor{
-		Name:        name,
-		Tasks:       tasks,
-		numWorkers:  numWorkers,
-		maxAttempts: maxAttempts,
-		timeout:     Config.Processor.Timeout,
+		Name:          name,
+		Tasks:         tasks,
+		numWorkers:    numWorkers,
+		maxAttempts:   maxAttempts,
+		delayAttempts: delayAttempts,
+		timeout:       Config.Timeout,
 
 		ctx:     ctx,
 		jobs:    make(chan *Task, len(tasks)),
@@ -83,7 +85,7 @@ func NewProcessor(ctx context.Context, name string, tasks []*Task, fixedAttempts
 	}
 }
 
-func (proc *Processor) Run() []Processed {
+func (proc *Processor) Run() (results []Processed) {
 	ctx, cancel := context.WithTimeout(
 		proc.ctx,
 		time.Duration(proc.timeout*int(time.Second)),
@@ -93,7 +95,9 @@ func (proc *Processor) Run() []Processed {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorf("unexpected panic in run processor: %s", r)
+			results = nil
 			cancel()
+			return
 		}
 	}()
 
@@ -110,7 +114,9 @@ func (proc *Processor) Run() []Processed {
 			defer func() {
 				if r := recover(); r != nil {
 					log.Errorf("unexpected panic in job goroutine: %s", r)
+					results = nil
 					cancel()
+					return
 				}
 			}()
 			for {
@@ -140,9 +146,12 @@ func (proc *Processor) Run() []Processed {
 
 					var failedErr error
 
+					if proc.delayAttempts && job.DelayFn == nil {
+						panic("invalid configuration, delayAttempts is true but delayFn is nil")
+					}
+
 					// only run job if sufficient time has passed
-					delay := job.DelayFn(job.currentAttempt)
-					if time.Since(job.lastTried) >= delay {
+					if !proc.delayAttempts || time.Since(job.lastTried) >= job.DelayFn(job.currentAttempt) {
 						var processingErr error
 						result, processingErr = job.Process(ctx)
 						if processingErr != nil {
@@ -159,6 +168,7 @@ func (proc *Processor) Run() []Processed {
 					}
 
 					if denied {
+						// create goroutine to wait for delay
 						log.WithFields(log.Fields{
 							"agent": proc.Name,
 							"job":   job.Name,
@@ -198,7 +208,7 @@ func (proc *Processor) Run() []Processed {
 	}()
 
 	// receive job results
-	results := make([]Processed, 0)
+	results = make([]Processed, 0)
 	failures := make([]*Task, 0)
 
 	// wait for all jobs to fail, succeed or timeout
