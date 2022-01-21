@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"context"
+
 	"cloud.google.com/go/firestore"
 	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
@@ -10,27 +12,29 @@ import (
 )
 
 func CollectJupiter(
+	ctx context.Context,
 	DB db.Env,
 	queryParams map[string][]string,
-	afterCallback func(db.Env) func(results processor.Processed) error,
+	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
 ) {
 	scraper := courses.NewJupiterScraper(queryParams["institute"][0])
 	processor.NewProcessor(
+		ctx,
 		"[jupiter-processor]",
 		[]*processor.Task{
 			processor.NewTask(
 				"jupiter-task",
 				processor.QuadraticDelay,
-				scraper.Process(),
-				afterCallback(DB),
+				scraper.Process(ctx),
+				afterCallback(ctx, DB),
 			),
 		},
 		true,
 	).Run()
 }
 
-func setSubjectData(DB db.Env, excludeStats bool) func(results processor.Processed) error {
-	return func(result processor.Processed) error {
+func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(context.Context, processor.Processed) error {
+	return func(_ context.Context, result processor.Processed) error {
 		var institute = result.(models.Institute)
 		objs := make([]db.BatchObject, 0)
 
@@ -59,14 +63,15 @@ func setSubjectData(DB db.Env, excludeStats bool) func(results processor.Process
 			)
 		}
 
+		DB.Ctx = ctx // super hacky, but it works for now
 		return DB.BatchWrite(objs)
 	}
 }
 
-func BuildSubjectData(DB db.Env) func(results processor.Processed) error {
-	return setSubjectData(DB, false)
+func BuildSubjectData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
+	return setSubjectData(ctx, DB, false)
 }
 
-func UpdateSubjectData(DB db.Env) func(results processor.Processed) error {
-	return setSubjectData(DB, true)
+func UpdateSubjectData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
+	return setSubjectData(ctx, DB, true)
 }

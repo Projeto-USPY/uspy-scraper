@@ -16,11 +16,11 @@ func Update(
 	return func(ctx *gin.Context) {
 		queryParams := ctx.Request.URL.Query()
 
-		log.WithField("params", queryParams).Infoln("running jupiter collector")
-		collector.CollectJupiter(env, queryParams, collector.UpdateSubjectData)
+		log.WithField("params", queryParams).Info("running jupiter collector")
+		collector.CollectJupiter(ctx, env, queryParams, collector.UpdateSubjectData)
 
-		log.WithField("params", queryParams).Infoln("running offerings collector")
-		collector.CollectOfferings(env, queryParams, collector.UpdateOfferingsData)
+		log.WithField("params", queryParams).Info("running offerings collector")
+		collector.CollectOfferings(ctx, env, queryParams, collector.UpdateOfferingsData)
 
 		log.Info("done")
 		ctx.Status(http.StatusOK)
@@ -33,11 +33,11 @@ func Build(
 	return func(ctx *gin.Context) {
 		queryParams := ctx.Request.URL.Query()
 
-		log.WithField("params", queryParams).Infoln("running jupiter collector")
-		collector.CollectJupiter(env, queryParams, collector.BuildSubjectData)
+		log.WithField("params", queryParams).Info("running jupiter collector")
+		collector.CollectJupiter(ctx, env, queryParams, collector.BuildSubjectData)
 
-		log.WithField("params", queryParams).Infoln("running offerings collector")
-		collector.CollectOfferings(env, queryParams, collector.BuildOfferingsData)
+		log.WithField("params", queryParams).Info("running offerings collector")
+		collector.CollectOfferings(ctx, env, queryParams, collector.BuildOfferingsData)
 
 		log.Info("done")
 		ctx.Status(http.StatusOK)
