@@ -2,7 +2,6 @@ package collector
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
@@ -17,13 +16,13 @@ func CollectOfferings(
 	queryParams map[string][]string,
 	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
 ) {
-	scraper := offerings.NewOfferingsScraper(parseInstitutesFromQuery(queryParams)...)
+	scraper := offerings.NewOfferingsScraper(parseInstitutesFromQuery(queryParams), parseSkipInstitutesFromQuery(queryParams))
 	processor.NewProcessor(
 		DB.Ctx,
-		"[offerings-processor]",
+		log.Fields{"name": "main-processor"},
 		[]*processor.Task{
 			processor.NewTask(
-				"offerings-task",
+				log.Fields{"name": "offerings-task"}, // no IDs
 				processor.QuadraticDelay,
 				scraper.Process(ctx),
 				afterCallback(ctx, DB),
@@ -68,7 +67,10 @@ func setOfferingsData(ctx context.Context, DB db.Env) func(_ context.Context, re
 			for _, p := range institute.(models.Institute).Professors {
 				for _, off := range p.Offerings {
 					queryTasks = append(queryTasks, processor.NewTask(
-						fmt.Sprintf("[offering-query-task] %s:%s", p.CodPes, off.Code),
+						log.Fields{
+							"professor": p.CodPes,
+							"subject":   off.Code,
+						},
 						processor.QuadraticDelay,
 						queryProcessor(ctx, DB, off),
 						nil,
@@ -78,7 +80,7 @@ func setOfferingsData(ctx context.Context, DB db.Env) func(_ context.Context, re
 
 			results := processor.NewProcessor(
 				ctx,
-				"[offering-processor]",
+				log.Fields{"name": "offering-processor"},
 				queryTasks,
 				true,
 				true,

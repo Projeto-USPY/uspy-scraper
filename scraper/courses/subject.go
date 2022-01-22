@@ -186,7 +186,7 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 		fields := strings.SplitN(fullName, "-", 2)
 
 		if len(fields) < 2 {
-			return nil, errors.New("could not get subject name, this is unexpected")
+			return nil, fmt.Errorf("could not get subject name from %s, this is unexpected", URL)
 		}
 
 		name := strings.TrimSpace(fields[1])

@@ -72,9 +72,7 @@ func (sc *InstituteScraper) Process(ctx context.Context) func(context.Context) (
 
 		courses := doc.Find(`td[valign="top"] > font > span`)
 		if courses.Length()%2 != 0 { // odd is unexpected because each course should have a shift
-			log.WithFields(log.Fields{
-				"institute": sc.Code,
-			}).Errorf("can't scrape institute, for some reason there's not a shift for each course")
+			log.Errorf("can't scrape institute, for some reason there's not a shift for each course")
 			return nil, errors.New("can't scrape institute, for some reason there's not a shift for each course")
 		}
 
@@ -85,9 +83,7 @@ func (sc *InstituteScraper) Process(ctx context.Context) func(context.Context) (
 			cleanShift := strings.Trim(shift, " \n\t")
 
 			if len(cleanShift) == 0 {
-				log.WithFields(log.Fields{
-					"institute": sc.Code,
-				}).Errorf("can't scrape institute, for some reason there's a couse with an empty shift")
+				log.Errorf("can't scrape institute, for some reason there's a course with an empty shift")
 				return nil, errors.New("course shift is empty")
 			}
 
@@ -96,12 +92,12 @@ func (sc *InstituteScraper) Process(ctx context.Context) func(context.Context) (
 			} else {
 				courseScraper := NewCourseScraper(sc.Code, courseCode, courseSpec, cleanShift)
 				courseTasks = append(courseTasks, processor.NewTask(
-					fmt.Sprintf(
-						"[course-task] %s:%s:%s",
-						institute.Code,
-						courseCode,
-						cleanShift,
-					),
+					log.Fields{
+						"name":      "course-task",
+						"institute": institute.Code,
+						"course":    courseCode,
+						"shift":     cleanShift,
+					},
 					processor.QuadraticDelay,
 					courseScraper.Process(),
 					nil,
@@ -111,10 +107,10 @@ func (sc *InstituteScraper) Process(ctx context.Context) func(context.Context) (
 
 		proc := processor.NewProcessor(
 			ctx,
-			fmt.Sprintf(
-				"[institute-processor] %s",
-				institute.Code,
-			),
+			log.Fields{
+				"name":      "institute-processor",
+				"institute": institute.Code,
+			},
 			courseTasks,
 			processor.Config.FixedAttempts,
 			processor.Config.DelayAttempts,

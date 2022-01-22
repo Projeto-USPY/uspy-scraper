@@ -2,19 +2,21 @@ package courses
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
+	log "github.com/sirupsen/logrus"
 )
 
 type JupiterScraper struct {
 	Codes []string
+	Skip  map[string]bool
 }
 
-func NewJupiterScraper(institutes ...string) JupiterScraper {
+func NewJupiterScraper(institutes []string, skip map[string]bool) JupiterScraper {
 	return JupiterScraper{
 		Codes: institutes,
+		Skip:  skip,
 	}
 }
 
@@ -34,9 +36,17 @@ func (sc *JupiterScraper) Process(ctx context.Context) func(context.Context) (pr
 
 		// create tasks
 		for _, code := range instituteCodes {
+			if sc.Skip[code] {
+				log.Debugln("skipping institute", code)
+				continue
+			}
+
 			instituteScraper := NewInstituteScraper(code)
 			instituteTasks = append(instituteTasks, processor.NewTask(
-				fmt.Sprintf("[institute-jupiter-task] %s", code),
+				log.Fields{
+					"name":      "institute-task",
+					"institute": code,
+				},
 				processor.QuadraticDelay,
 				instituteScraper.Process(ctx),
 				nil,
@@ -46,7 +56,7 @@ func (sc *JupiterScraper) Process(ctx context.Context) func(context.Context) (pr
 
 		jupiterProcessor := processor.NewProcessor(
 			ctx,
-			"[jupiter-processor]",
+			log.Fields{"name": "jupiter-processor"},
 			instituteTasks,
 			processor.Config.FixedAttempts,
 			processor.Config.DelayAttempts,

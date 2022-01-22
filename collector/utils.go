@@ -13,3 +13,15 @@ func parseInstitutesFromQuery(query map[string][]string) []string {
 
 	return instituteCodes
 }
+
+func parseSkipInstitutesFromQuery(query map[string][]string) map[string]bool {
+	skip := make(map[string]bool)
+	if len(query["skip"]) > 0 {
+		codes := strings.Split(query["skip"][0], ",")
+		for _, code := range codes {
+			skip[code] = true
+		}
+	}
+
+	return skip
+}

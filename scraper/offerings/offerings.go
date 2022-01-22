@@ -2,19 +2,21 @@ package offerings
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
+	log "github.com/sirupsen/logrus"
 )
 
 type OfferingsScraper struct {
 	InstituteCodes []string
+	Skip           map[string]bool
 }
 
-func NewOfferingsScraper(institutes ...string) OfferingsScraper {
+func NewOfferingsScraper(institutes []string, skip map[string]bool) OfferingsScraper {
 	return OfferingsScraper{
 		InstituteCodes: institutes,
+		Skip:           skip,
 	}
 }
 
@@ -34,9 +36,16 @@ func (sc *OfferingsScraper) Process(ctx context.Context) func(context.Context) (
 		// create tasks
 		var instituteTasks []*processor.Task
 		for _, code := range instituteCodes {
+			if sc.Skip[code] {
+				continue
+			}
+
 			instituteScraper := NewInstituteScraper(code)
 			instituteTasks = append(instituteTasks, processor.NewTask(
-				fmt.Sprintf("[institute-offerings-task] %s", code),
+				log.Fields{
+					"name":      "institute-task",
+					"institute": code,
+				},
 				processor.QuadraticDelay,
 				instituteScraper.Process(ctx),
 				nil,
@@ -46,7 +55,7 @@ func (sc *OfferingsScraper) Process(ctx context.Context) func(context.Context) (
 
 		offeringsProcessor := processor.NewProcessor(
 			ctx,
-			"[offerings-processor]",
+			log.Fields{"name": "offerings-processor"},
 			instituteTasks,
 			processor.Config.FixedAttempts,
 			processor.Config.DelayAttempts,

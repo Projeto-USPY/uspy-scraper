@@ -18,13 +18,13 @@ func CollectJupiter(
 	queryParams map[string][]string,
 	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
 ) {
-	scraper := courses.NewJupiterScraper(parseInstitutesFromQuery(queryParams)...)
+	scraper := courses.NewJupiterScraper(parseInstitutesFromQuery(queryParams), parseSkipInstitutesFromQuery(queryParams))
 	processor.NewProcessor(
 		ctx,
-		"[jupiter-processor]",
+		log.Fields{"name": "main-processor"},
 		[]*processor.Task{
 			processor.NewTask(
-				"[jupiter-task]",
+				log.Fields{"name": "jupiter-task"},
 				processor.QuadraticDelay,
 				scraper.Process(ctx),
 				afterCallback(ctx, DB),

@@ -11,6 +11,7 @@ import (
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/PuerkitoBio/goquery"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -97,12 +98,13 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 
 					// create subject task
 					subjectTasks = append(subjectTasks, processor.NewTask(
-						fmt.Sprintf( // task id = subject:course:specialization
-							"[subject-task] %s:%s:%s",
-							subjectCode,
-							course.Code,
-							course.Specialization,
-						),
+						log.Fields{
+							"name":           "subject-task",
+							"subject":        subjectCode,
+							"course":         course.Code,
+							"specialization": course.Specialization,
+							"shift":          course.Shift,
+						},
 						processor.QuadraticDelay,
 						subjectScraper.Process(period, rows, optional),
 						nil,
@@ -116,10 +118,10 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 
 		proc := processor.NewProcessor(
 			context.Background(),
-			fmt.Sprintf(
-				"[subject-processor] %s",
-				strings.ToLower(course.Name),
-			),
+			log.Fields{
+				"name":   "subject-processor",
+				"course": course.Name,
+			},
 			subjectTasks,
 			processor.Config.FixedAttempts,
 			processor.Config.DelayAttempts,
