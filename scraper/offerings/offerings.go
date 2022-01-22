@@ -1,4 +1,4 @@
-package courses
+package offerings
 
 import (
 	"context"
@@ -8,36 +8,35 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type JupiterScraper struct {
-	Codes []string
-	Skip  map[string]bool
+type OfferingsScraper struct {
+	InstituteCodes []string
+	Skip           map[string]bool
 }
 
-func NewJupiterScraper(institutes []string, skip map[string]bool) JupiterScraper {
-	return JupiterScraper{
-		Codes: institutes,
-		Skip:  skip,
+func NewOfferingsScraper(institutes []string, skip map[string]bool) OfferingsScraper {
+	return OfferingsScraper{
+		InstituteCodes: institutes,
+		Skip:           skip,
 	}
 }
 
-func (sc *JupiterScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
-	return func(context.Context) (processor.Processed, error) {
-		var instituteTasks []*processor.Task
+func (sc *OfferingsScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
+	return func(c context.Context) (processor.Processed, error) {
 		var instituteCodes []string
 
-		if len(sc.Codes) == 0 { // scrape all institutes
+		if len(sc.InstituteCodes) == 0 { // scrape all institutes
 			var err error
 			if instituteCodes, err = scraper.GetAllInstitutes(); err != nil {
 				return nil, err
 			}
 		} else {
-			instituteCodes = sc.Codes
+			instituteCodes = sc.InstituteCodes
 		}
 
 		// create tasks
+		var instituteTasks []*processor.Task
 		for _, code := range instituteCodes {
 			if sc.Skip[code] {
-				log.Debugln("skipping institute", code)
 				continue
 			}
 
@@ -54,15 +53,14 @@ func (sc *JupiterScraper) Process(ctx context.Context) func(context.Context) (pr
 
 		}
 
-		jupiterProcessor := processor.NewProcessor(
+		offeringsProcessor := processor.NewProcessor(
 			ctx,
-			log.Fields{"name": "jupiter-processor"},
+			log.Fields{"name": "offerings-processor"},
 			instituteTasks,
 			processor.Config.FixedAttempts,
 			processor.Config.DelayAttempts,
 		)
 
-		return jupiterProcessor.Run(), nil
-
+		return offeringsProcessor.Run(), nil
 	}
 }

@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
@@ -27,10 +25,7 @@ type ProfessorsList []struct {
 	Name string      `json:"nompes"`
 }
 
-func (d ProfessorsList) Insert(_ db.Env, _ string) error { return nil }
-func (d ProfessorsList) Update(_ db.Env, _ string) error { return nil }
-
-type ProfessorScraper struct {
+type InstituteScraper struct {
 	ProfessorsURLMask string
 
 	Institute string
@@ -39,8 +34,8 @@ type ProfessorScraper struct {
 	Types     []string
 }
 
-func NewProfessorScraper(institute string) ProfessorScraper {
-	return ProfessorScraper{
+func NewInstituteScraper(institute string) InstituteScraper {
+	return InstituteScraper{
 		ProfessorsURLMask: DefaultProfessorsURLMask,
 		Institute:         institute,
 		Begin:             "2010",
@@ -49,7 +44,7 @@ func NewProfessorScraper(institute string) ProfessorScraper {
 	}
 }
 
-func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
+func (sc *InstituteScraper) Process(ctx context.Context) func(context.Context) (processor.Processed, error) {
 	return func(context.Context) (processor.Processed, error) {
 		// preprocess by getting institute departments
 		depScraper := NewDepartmentsScraper(sc.Institute)
@@ -66,11 +61,11 @@ func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (
 		for _, dep := range departments {
 			for _, citationsType := range sc.Types {
 				professorTasks = append(professorTasks, processor.NewTask(
-					fmt.Sprintf(
-						"[professor-task] %s:%s",
-						dep.Department,
-						citationsType,
-					),
+					log.Fields{
+						"name":       "professor-task",
+						"department": dep.Department,
+						"category":   citationsType,
+					},
 					processor.QuadraticDelay,
 					sc.ScrapeProfessor(dep.Department, citationsType),
 					nil,
@@ -80,9 +75,13 @@ func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (
 
 		proc := processor.NewProcessor(
 			ctx,
-			fmt.Sprintf("[professor-processor] %s", sc.Institute),
+			log.Fields{
+				"name":      "professor-processor",
+				"institute": sc.Institute,
+			},
 			professorTasks,
-			true,
+			processor.Config.FixedAttempts,
+			processor.Config.DelayAttempts,
 		)
 
 		depResults := proc.Run()
@@ -93,11 +92,11 @@ func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (
 				year := "2015"
 				uraniaScraper := NewUraniaScraper(prof.Code.String(), year, prof.Name)
 				offeringTasks = append(offeringTasks, processor.NewTask(
-					fmt.Sprintf(
-						"[offering-task] %s:%s",
-						prof.Code,
-						strings.ReplaceAll(strings.ToLower(prof.Name), " ", "_"),
-					),
+					log.Fields{
+						"name":           "urania-task",
+						"professor":      prof.Code,
+						"professor-name": prof.Name,
+					},
 					processor.QuadraticDelay,
 					uraniaScraper.Process(),
 					nil,
@@ -108,9 +107,13 @@ func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (
 
 		proc = processor.NewProcessor(
 			ctx,
-			fmt.Sprintf("[offerings-processor] %s", sc.Institute),
+			log.Fields{
+				"name":      "offerings-processor",
+				"institute": sc.Institute,
+			},
 			offeringTasks,
-			true,
+			processor.Config.FixedAttempts,
+			processor.Config.DelayAttempts,
 		)
 
 		profs := proc.Run()
@@ -137,7 +140,7 @@ func (sc *ProfessorScraper) Process(ctx context.Context) func(context.Context) (
 	}
 }
 
-func (sc *ProfessorScraper) ScrapeProfessor(department json.Number, citationsType string) func(context.Context) (processor.Processed, error) {
+func (sc *InstituteScraper) ScrapeProfessor(department json.Number, citationsType string) func(context.Context) (processor.Processed, error) {
 	return func(context.Context) (processor.Processed, error) {
 		URL := fmt.Sprintf(sc.ProfessorsURLMask, sc.Institute, department, sc.Begin, sc.End, citationsType)
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, false)

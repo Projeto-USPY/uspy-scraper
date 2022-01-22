@@ -3,7 +3,6 @@ package icmc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"github.com/Projeto-USPY/uspy-scraper/scraper"
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings"
 	"github.com/PuerkitoBio/goquery"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -76,11 +76,11 @@ func (sc *ICMCPeopleScraper) Process(ctx context.Context) func(context.Context) 
 						codPes := strconv.Itoa((num - 3) / 2)
 						uraniaSc := offerings.NewUraniaScraper(codPes, "2015", profName)
 						offeringTasks = append(offeringTasks, processor.NewTask(
-							fmt.Sprintf(
-								"[offering-task] %s:%s",
-								codPes,
-								strings.ReplaceAll(strings.ToLower(profName), " ", "_"),
-							),
+							log.Fields{
+								"name":           "urania-icmc-task",
+								"professor":      codPes,
+								"professor-name": profName,
+							},
 							processor.QuadraticDelay,
 							uraniaSc.Process(),
 							nil,
@@ -95,9 +95,10 @@ func (sc *ICMCPeopleScraper) Process(ctx context.Context) func(context.Context) 
 
 		proc := processor.NewProcessor(
 			ctx,
-			"[icmc-people-processor]",
+			log.Fields{"name": "icmc-people-processor"},
 			offeringTasks,
-			true,
+			processor.Config.FixedAttempts,
+			processor.Config.DelayAttempts,
 		)
 
 		results := proc.Run()

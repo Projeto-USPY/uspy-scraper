@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/Projeto-USPY/uspy-scraper/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -14,7 +15,7 @@ type (
 	Processed interface{}
 
 	Task struct {
-		Name string
+		IDs log.Fields
 
 		Process func(ctx context.Context) (Processed, error)
 		After   func(ctx context.Context, results Processed) error
@@ -26,12 +27,13 @@ type (
 	}
 
 	Processor struct {
-		Name  string
+		IDs   log.Fields
 		Tasks []*Task
 
-		numWorkers  int
-		maxAttempts int
-		timeout     int
+		numWorkers    int
+		maxAttempts   int
+		timeout       int
+		delayAttempts bool
 
 		ctx     context.Context
 		jobs    chan *Task
@@ -41,13 +43,13 @@ type (
 )
 
 func NewTask(
-	ID string,
+	IDs log.Fields,
 	delayFn func(int) time.Duration,
 	processFn func(context.Context) (Processed, error),
 	afterFn func(context.Context, Processed) error,
 ) *Task {
 	return &Task{
-		Name:    ID,
+		IDs:     IDs,
 		Process: processFn,
 		After:   afterFn,
 		DelayFn: delayFn,
@@ -58,23 +60,31 @@ func NewTask(
 	}
 }
 
-func NewProcessor(ctx context.Context, name string, tasks []*Task, fixedAttempts bool) *Processor {
-	numWorkers := Config.Processor.NumWorkers
-	if Config.Processor.FractionalNumWorkers > 0.0 && Config.Processor.FractionalNumWorkers <= 1.0 {
-		numWorkers = int(math.Ceil(float64(len(tasks)) * Config.Processor.FractionalNumWorkers))
+func NewProcessor(
+	ctx context.Context,
+	IDs log.Fields,
+	tasks []*Task,
+	fixedAttempts,
+	delayAttempts bool,
+) *Processor {
+	numWorkers := Config.NumWorkers
+	if Config.FractionalNumWorkers > 0.0 && Config.FractionalNumWorkers <= 1.0 {
+		numWorkers = utils.MaxInt(1, int(math.Ceil(float64(len(tasks))*Config.FractionalNumWorkers)))
+		numWorkers = utils.MinInt(numWorkers, Config.MaxWorkers)
 	}
 
 	maxAttempts := -1
 	if fixedAttempts {
-		maxAttempts = Config.Processor.MaxAttempts
+		maxAttempts = Config.MaxAttempts
 	}
 
 	return &Processor{
-		Name:        name,
-		Tasks:       tasks,
-		numWorkers:  numWorkers,
-		maxAttempts: maxAttempts,
-		timeout:     Config.Processor.Timeout,
+		IDs:           IDs,
+		Tasks:         tasks,
+		numWorkers:    numWorkers,
+		maxAttempts:   maxAttempts,
+		delayAttempts: delayAttempts,
+		timeout:       Config.Timeout,
 
 		ctx:     ctx,
 		jobs:    make(chan *Task, len(tasks)),
@@ -83,21 +93,34 @@ func NewProcessor(ctx context.Context, name string, tasks []*Task, fixedAttempts
 	}
 }
 
-func (proc *Processor) Run() []Processed {
-	ctx, cancel := context.WithTimeout(
-		proc.ctx,
-		time.Duration(proc.timeout*int(time.Second)),
-	)
+func (proc *Processor) Run() (results []Processed) {
+	log := log.WithField("workers", proc.numWorkers).WithFields(proc.IDs)
+
+	var ctx = proc.ctx
+	var cancel context.CancelFunc
+
+	if Config.Timeout != -1 {
+		ctx, cancel = context.WithTimeout(
+			ctx,
+			time.Duration(proc.timeout*int(time.Second)),
+		)
+	} else {
+		ctx, cancel = context.WithCancel(
+			ctx,
+		)
+	}
+
 	defer cancel()
 
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorf("unexpected panic in run processor: %s", r)
+			results = nil
 			cancel()
+			return
 		}
 	}()
 
-	log.Debugf("launching %s: %v workers for %v tasks\n", proc.Name, proc.numWorkers, len(proc.Tasks))
 	init := time.Now()
 
 	defer close(proc.jobs)
@@ -105,12 +128,15 @@ func (proc *Processor) Run() []Processed {
 	defer close(proc.failed)
 
 	// prepare workers
+	log.Debug("launching workers")
 	for i := 0; i < proc.numWorkers; i++ {
 		go func(ctx context.Context) {
 			defer func() {
 				if r := recover(); r != nil {
 					log.Errorf("unexpected panic in job goroutine: %s", r)
+					results = nil
 					cancel()
+					return
 				}
 			}()
 			for {
@@ -118,19 +144,14 @@ func (proc *Processor) Run() []Processed {
 				case <-ctx.Done():
 					return
 				case job := <-proc.jobs:
-					log.WithFields(log.Fields{
-						"agent": proc.Name,
-						"job":   job.Name,
-					}).Debug("starting job")
+					log := log.WithFields(job.IDs)
+					log.Debug("starting job")
 
 					// fail job if exceeded retries
 					if proc.maxAttempts != -1 && job.currentAttempt > proc.maxAttempts {
-						log.WithFields(log.Fields{
-							"agent": proc.Name,
-							"job":   job.Name,
-						}).Warn("job exceeded max retries, failing...")
+						log.Warn("job exceeded max retries, failing...")
 						proc.failed <- job
-						continue
+						break
 					}
 
 					var result Processed
@@ -140,15 +161,20 @@ func (proc *Processor) Run() []Processed {
 
 					var failedErr error
 
+					if proc.delayAttempts && job.DelayFn == nil {
+						panic("invalid configuration, delayAttempts is true but delayFn is nil")
+					}
+
 					// only run job if sufficient time has passed
-					delay := job.DelayFn(job.currentAttempt)
-					if time.Since(job.lastTried) >= delay {
+					if !proc.delayAttempts || time.Since(job.lastTried) >= job.DelayFn(job.currentAttempt) {
 						var processingErr error
+						log.Debug("executing process callback")
 						result, processingErr = job.Process(ctx)
 						if processingErr != nil {
 							failed = true // processing failure
 							failedErr = fmt.Errorf("%s: %s", "processing error", processingErr.Error())
 						} else if job.After != nil {
+							log.Debug("executing after-process callback")
 							if err := job.After(ctx, result); err != nil {
 								failed = true // after-processing failure
 								failedErr = fmt.Errorf("%s: %s", "after-processing error", processingErr.Error())
@@ -159,17 +185,11 @@ func (proc *Processor) Run() []Processed {
 					}
 
 					if denied {
-						log.WithFields(log.Fields{
-							"agent": proc.Name,
-							"job":   job.Name,
-						}).Warn("job denied by now...")
+						// create goroutine to wait for delay
+						log.Warn("job denied by now...")
 						proc.jobs <- job
 					} else if failed {
-						log.WithFields(log.Fields{
-							"agent": proc.Name,
-							"job":   job.Name,
-							"error": failedErr,
-						}).Error("job failed...")
+						log.Error("job failed...")
 
 						job.currentAttempt++
 						job.lastTried = time.Now()
@@ -177,10 +197,7 @@ func (proc *Processor) Run() []Processed {
 
 						proc.jobs <- job
 					} else {
-						log.WithFields(log.Fields{
-							"agent": proc.Name,
-							"job":   job.Name,
-						}).Debug("job successful")
+						log.Debug("job successful")
 						proc.results <- result
 					}
 				}
@@ -198,41 +215,41 @@ func (proc *Processor) Run() []Processed {
 	}()
 
 	// receive job results
-	results := make([]Processed, 0)
+	results = make([]Processed, 0)
 	failures := make([]*Task, 0)
 
 	// wait for all jobs to fail, succeed or timeout
+ConsumeLoop:
 	for {
 		select {
 		case result := <-proc.results:
 			results = append(results, result)
 		case failure := <-proc.failed:
 			failures = append(failures, failure)
-		}
-
-		if ctx.Err() != nil || len(results)+len(failures) == len(proc.Tasks) {
-			cancel()
-			break
+		default:
+			if ctx.Err() != nil || len(results)+len(failures) == len(proc.Tasks) {
+				cancel()
+				break ConsumeLoop
+			}
 		}
 	}
 
 	if errors.Is(ctx.Err(), context.Canceled) {
-		log.WithField("agent", proc.Name).Infof("work is done, stopping...")
+		log.Debug("work is done, stopping...")
 	} else if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		log.WithField("agent", proc.Name).Errorf("timeout exceeded, stopping...")
+		log.Errorf("timeout exceeded, stopping...")
 	}
-
-	log.WithField("agent", proc.Name).Infof("time elapsed: %v\n", time.Since(init))
 
 	if len(proc.failed) > 0 {
 		log.Warnln(len(proc.failed), "jobs failed")
 
 		for _, failedJob := range failures {
 			if failedJob.err != nil {
-				log.Errorf("[failed] job: %s, reason: %s\n", failedJob.Name, failedJob.err.Error())
+				log.Errorf("[failed] job, reason: %s", failedJob.err.Error())
 			}
 		}
 	}
 
+	log.Infof("processor finished, time elapsed: %v", time.Since(init))
 	return results
 }

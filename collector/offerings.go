@@ -2,12 +2,12 @@ package collector
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Projeto-USPY/uspy-backend/db"
 	"github.com/Projeto-USPY/uspy-backend/entity/models"
 	"github.com/Projeto-USPY/uspy-scraper/processor"
 	"github.com/Projeto-USPY/uspy-scraper/scraper/offerings"
+	log "github.com/sirupsen/logrus"
 )
 
 func CollectOfferings(
@@ -16,19 +16,20 @@ func CollectOfferings(
 	queryParams map[string][]string,
 	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
 ) {
-	scraper := offerings.NewProfessorScraper(queryParams["institute"][0])
+	scraper := offerings.NewOfferingsScraper(parseInstitutesFromQuery(queryParams), parseSkipInstitutesFromQuery(queryParams))
 	processor.NewProcessor(
 		DB.Ctx,
-		"[offerings-processor]",
+		log.Fields{"name": "main-processor"},
 		[]*processor.Task{
 			processor.NewTask(
-				"offerings-task",
+				log.Fields{"name": "offerings-task"}, // no IDs
 				processor.QuadraticDelay,
 				scraper.Process(ctx),
 				afterCallback(ctx, DB),
 			),
 		},
 		true,
+		false,
 	).Run()
 }
 
@@ -58,31 +59,40 @@ func queryProcessor(
 }
 
 func setOfferingsData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
-	return func(_ context.Context, result processor.Processed) error {
+	return func(_ context.Context, results processor.Processed) error {
+		objects := make([]db.BatchObject, 0)
 		queryTasks := make([]*processor.Task, 0)
-		for _, p := range result.(models.Institute).Professors {
-			for _, off := range p.Offerings {
-				queryTasks = append(queryTasks, processor.NewTask(
-					fmt.Sprintf("[offering-query-task] %s:%s", p.CodPes, off.Code),
-					processor.QuadraticDelay,
-					queryProcessor(ctx, DB, off),
-					nil,
-				))
+
+		for _, institute := range results.([]processor.Processed) {
+			for _, p := range institute.(models.Institute).Professors {
+				for _, off := range p.Offerings {
+					queryTasks = append(queryTasks, processor.NewTask(
+						log.Fields{
+							"professor": p.CodPes,
+							"subject":   off.Code,
+						},
+						processor.QuadraticDelay,
+						queryProcessor(ctx, DB, off),
+						nil,
+					))
+				}
+			}
+
+			results := processor.NewProcessor(
+				ctx,
+				log.Fields{"name": "offering-processor"},
+				queryTasks,
+				true,
+				true,
+			).Run()
+
+			for _, batch := range results {
+				objects = append(objects, batch.([]db.BatchObject)...)
 			}
 		}
 
-		results := processor.NewProcessor(
-			ctx,
-			"[offering-processor]",
-			queryTasks,
-			true,
-		).Run()
-
-		objects := make([]db.BatchObject, 0, len(results))
-		for _, batch := range results {
-			objects = append(objects, batch.([]db.BatchObject)...)
-		}
-
+		DB.Ctx = ctx // super hacky, but it works for now
+		log.Infof("batch writing offering objects, total: %d", len(objects))
 		return DB.BatchWrite(objects)
 	}
 }
