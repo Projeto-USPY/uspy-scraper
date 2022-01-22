@@ -95,10 +95,21 @@ func NewProcessor(
 
 func (proc *Processor) Run() (results []Processed) {
 	log := log.WithField("workers", proc.numWorkers).WithFields(proc.IDs)
-	ctx, cancel := context.WithTimeout(
-		proc.ctx,
-		time.Duration(proc.timeout*int(time.Second)),
-	)
+
+	var ctx = proc.ctx
+	var cancel context.CancelFunc
+
+	if Config.Timeout != -1 {
+		ctx, cancel = context.WithTimeout(
+			ctx,
+			time.Duration(proc.timeout*int(time.Second)),
+		)
+	} else {
+		ctx, cancel = context.WithCancel(
+			ctx,
+		)
+	}
+
 	defer cancel()
 
 	defer func() {
