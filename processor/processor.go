@@ -128,7 +128,7 @@ func (proc *Processor) Run() (results []Processed) {
 	defer close(proc.failed)
 
 	// prepare workers
-	log.Info("launching workers")
+	log.Debug("launching workers")
 	for i := 0; i < proc.numWorkers; i++ {
 		go func(ctx context.Context) {
 			defer func() {
@@ -207,7 +207,7 @@ func (proc *Processor) Run() (results []Processed) {
 	}
 
 	// send jobs
-	log.Info("sending jobs")
+	log.Debug("sending jobs")
 	go func() {
 		for _, task := range proc.Tasks {
 			proc.jobs <- task
@@ -235,7 +235,7 @@ ConsumeLoop:
 	}
 
 	if errors.Is(ctx.Err(), context.Canceled) {
-		log.Info("work is done, stopping...")
+		log.Debug("work is done, stopping...")
 	} else if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		log.Errorf("timeout exceeded, stopping...")
 	}

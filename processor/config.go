@@ -9,7 +9,7 @@ type env struct {
 	MaxAttempts          int     `envconfig:"MAX_ATTEMPTS" default:"3"`
 	FixedAttempts        bool    `envconfig:"FIXED_ATTEMPTS" default:"true"`
 	DelayAttempts        bool    `envconfig:"DELAY_ATTEMPTS" default:"false"`
-	Timeout              int     `envconfig:"TIMEOUT" default:"900"` // timeout in seconds, -1 is unlimited
+	Timeout              int     `envconfig:"TIMEOUT" default:"-1"` // timeout in seconds, -1 is unlimited
 }
 
 var Config env
