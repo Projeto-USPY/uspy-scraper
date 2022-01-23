@@ -92,18 +92,15 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 
 					subjectObj := subjectNode.Find("a")
 					subjectCode := strings.TrimSpace(subjectObj.Text())
-					fallbackURL := subjectObj.AttrOr("href", "none")
+					subjectURL := DefaultSubjectRoot + subjectObj.AttrOr("href", "none")
 
-					subjectScraper := NewSubjectScraper(subjectCode, course.Code, course.Specialization, fallbackURL)
+					subjectScraper := NewSubjectScraper(subjectCode, subjectURL)
 
 					// create subject task
 					subjectTasks = append(subjectTasks, processor.NewTask(
 						log.Fields{
-							"name":           "subject-task",
-							"subject":        subjectCode,
-							"course":         course.Code,
-							"specialization": course.Specialization,
-							"shift":          course.Shift,
+							"name":    "subject-task",
+							"subject": subjectURL,
 						},
 						processor.QuadraticDelay,
 						subjectScraper.Process(period, rows, optional),
@@ -134,6 +131,9 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 		}
 
 		for _, s := range course.Subjects {
+			if s.CourseCode != course.Code || s.Specialization != course.Specialization {
+				continue
+			}
 			course.SubjectCodes[s.Code] = s.Name
 		}
 

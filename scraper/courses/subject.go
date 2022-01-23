@@ -16,29 +16,18 @@ import (
 )
 
 var (
-	DefaultSubjectRoot    = "https://uspdigital.usp.br/jupiterweb/"
-	DefaultSubjectURLMask = DefaultSubjectRoot + "obterDisciplina?sgldis=%s&codcur=%s&codhab=%s"
+	DefaultSubjectRoot = "https://uspdigital.usp.br/jupiterweb/"
 )
 
 type SubjectScraper struct {
-	URLMask string
-
-	Code           string
-	CourseCode     string
-	Specialization string
-
-	fallbackURL string
+	URL  string
+	Code string
 }
 
-func NewSubjectScraper(subject, course, spec, fallbackURL string) SubjectScraper {
+func NewSubjectScraper(subjectCode, subjectURL string) SubjectScraper {
 	return SubjectScraper{
-		URLMask:        DefaultSubjectURLMask,
-		Code:           subject,
-		CourseCode:     course,
-		Specialization: spec,
-
-		// this is stupid, only done this way cause some subjects have different URLs that differ from their hash!
-		fallbackURL: DefaultSubjectRoot + fallbackURL,
+		Code: subjectCode,
+		URL:  subjectURL,
 	}
 }
 
@@ -161,8 +150,7 @@ func getTotalHours(search *goquery.Selection) (string, error) {
 
 func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool) func(context.Context) (processor.Processed, error) {
 	return func(context.Context) (processor.Processed, error) {
-		URL := sc.fallbackURL
-		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
+		resp, reader, err := scraper.Fetch(sc.URL, http.MethodGet, nil, nil, true)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +161,7 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 			return nil, fmt.Errorf("failed to get code, course and specialization from fallback URL: %s", err.Error())
 		}
 
-		matches := rg.FindAllStringSubmatch(URL, -1)
+		matches := rg.FindAllStringSubmatch(sc.URL, -1)
 		if len(matches) != 1 || len(matches[0]) != 3 {
 			return nil, errors.New("failed to get code, course and specialization from fallback URL")
 		}
@@ -189,7 +177,7 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 		fields := strings.SplitN(fullName, "-", 2)
 
 		if len(fields) < 2 {
-			return nil, fmt.Errorf("could not get subject name from %s, this is unexpected", URL)
+			return nil, fmt.Errorf("could not get subject name from %s, this is unexpected", sc.URL)
 		}
 
 		name := strings.TrimSpace(fields[1])
