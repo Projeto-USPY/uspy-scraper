@@ -189,7 +189,7 @@ func (proc *Processor) Run() (results []Processed) {
 						log.Warn("job denied by now...")
 						proc.jobs <- job
 					} else if failed {
-						log.Error("job failed...")
+						log.WithField("error", failedErr).Error("job failed...")
 
 						job.currentAttempt++
 						job.lastTried = time.Now()
