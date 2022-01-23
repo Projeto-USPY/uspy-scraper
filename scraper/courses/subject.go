@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	DefaultSubjectURLMask = "https://uspdigital.usp.br/jupiterweb/obterDisciplina?sgldis=%s&codcur=%s&codhab=%s"
+	DefaultSubjectRoot    = "https://uspdigital.usp.br/jupiterweb/"
+	DefaultSubjectURLMask = DefaultSubjectRoot + "obterDisciplina?sgldis=%s&codcur=%s&codhab=%s"
 )
 
 type SubjectScraper struct {
@@ -37,7 +38,7 @@ func NewSubjectScraper(subject, course, spec, fallbackURL string) SubjectScraper
 		Specialization: spec,
 
 		// this is stupid, only done this way cause some subjects have different URLs that differ from their hash!
-		fallbackURL: fallbackURL,
+		fallbackURL: DefaultSubjectRoot + fallbackURL,
 	}
 }
 
@@ -160,22 +161,24 @@ func getTotalHours(search *goquery.Selection) (string, error) {
 
 func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool) func(context.Context) (processor.Processed, error) {
 	return func(context.Context) (processor.Processed, error) {
-		URL := fmt.Sprintf(sc.URLMask, sc.Code, sc.CourseCode, sc.Specialization)
-
+		URL := sc.fallbackURL
 		resp, reader, err := scraper.Fetch(URL, http.MethodGet, nil, nil, true)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			// try using fallback URL
-			fallbackResp, fallbackReader, fallbackErr := scraper.Fetch(sc.fallbackURL, http.MethodGet, nil, nil, true)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-			if fallbackErr != nil {
-				return nil, err
-			}
-
-			resp = fallbackResp
-			reader = fallbackReader
+		rg, err := regexp.Compile(`codcur=([0-9]+)&codhab=([0-9]+)`)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get code, course and specialization from fallback URL: %s", err.Error())
 		}
 
-		defer resp.Body.Close()
+		matches := rg.FindAllStringSubmatch(URL, -1)
+		if len(matches) != 1 || len(matches[0]) != 3 {
+			return nil, errors.New("failed to get code, course and specialization from fallback URL")
+		}
+
+		course, specialization := matches[0][1], matches[0][2]
 
 		doc, err := goquery.NewDocumentFromReader(reader)
 		if err != nil {
@@ -193,8 +196,8 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 
 		subject := models.Subject{
 			Code:           sc.Code,
-			CourseCode:     sc.CourseCode,
-			Specialization: sc.Specialization,
+			CourseCode:     course,
+			Specialization: specialization,
 			Name:           name,
 			Stats: map[string]int{
 				"total":    0,
