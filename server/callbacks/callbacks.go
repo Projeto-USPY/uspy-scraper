@@ -10,6 +10,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func Noop() func(*gin.Context) {
+	return func(ctx *gin.Context) {
+		queryParams := ctx.Request.URL.Query()
+
+		log.WithField("params", queryParams).Info("running jupiter collector")
+		collector.CollectJupiter(ctx, db.Env{}, queryParams, collector.Noop)
+
+		log.WithField("params", queryParams).Info("running offerings collector")
+		collector.CollectOfferings(ctx, db.Env{}, queryParams, collector.Noop)
+
+		log.Info("done")
+		ctx.Status(http.StatusOK)
+	}
+}
+
 func Update(
 	env db.Env,
 ) func(*gin.Context) {
