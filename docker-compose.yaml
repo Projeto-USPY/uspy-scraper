@@ -1,4 +1,4 @@
-version: "3.2"
+version: "3.5"
 services:
   firestore_emulator:
     build:
@@ -10,6 +10,8 @@ services:
     ports:
       - "4000:4000"
       - "8200:8200"
+    networks:
+      - "scraper_network"
   uspy-scraper:
     build: 
       context: .
@@ -24,3 +26,8 @@ services:
       - USPY_MODE=local
       - USPY_PORT=8300
       - LOG_LEVEL=${LOG_LEVEL} 
+    networks:
+      - "scraper_network"
+networks:
+  scraper_network:
+   name: scraper_network

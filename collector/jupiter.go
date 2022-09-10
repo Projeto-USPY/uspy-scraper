@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"fmt"
 
 	"cloud.google.com/go/firestore"
 	"github.com/Projeto-USPY/uspy-backend/db"
@@ -39,8 +40,9 @@ func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(cont
 	return func(_ context.Context, results processor.Processed) error {
 		objects := make([]db.BatchObject, 0)
 
-		for _, institute := range results.([]processor.Processed) {
-			for _, course := range institute.(models.Institute).Courses {
+		for _, result := range results.([]processor.Processed) {
+			institute := result.(models.Institute)
+			for _, course := range institute.Courses {
 				for _, sub := range course.Subjects {
 					if excludeStats {
 						objects = append(objects, db.BatchObject{
@@ -57,13 +59,18 @@ func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(cont
 						})
 					}
 				}
-
 				objects = append(objects, db.BatchObject{
-					Collection: "courses",
+					Collection: fmt.Sprintf("institutes/%s/courses", institute.Hash()),
 					Doc:        course.Hash(),
-					WriteData:  course},
-				)
+					WriteData:  course,
+				})
 			}
+
+			objects = append(objects, db.BatchObject{
+				Collection: "institutes",
+				Doc:        institute.Hash(),
+				WriteData:  institute,
+			})
 		}
 
 		DB.Ctx = ctx // super hacky, but it works for now

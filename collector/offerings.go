@@ -18,7 +18,7 @@ func CollectOfferings(
 ) {
 	scraper := offerings.NewOfferingsScraper(parseInstitutesFromQuery(queryParams), parseSkipInstitutesFromQuery(queryParams))
 	processor.NewProcessor(
-		DB.Ctx,
+		ctx,
 		log.Fields{"name": "main-processor"},
 		[]*processor.Task{
 			processor.NewTask(
