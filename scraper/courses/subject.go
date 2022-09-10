@@ -154,6 +154,7 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 		if err != nil {
 			return nil, err
 		}
+
 		defer resp.Body.Close()
 
 		rg, err := regexp.Compile(`codcur=([0-9]+)&codhab=([0-9]+)`)

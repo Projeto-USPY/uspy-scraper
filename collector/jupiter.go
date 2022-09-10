@@ -59,7 +59,6 @@ func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(cont
 						})
 					}
 				}
-
 				objects = append(objects, db.BatchObject{
 					Collection: fmt.Sprintf("institutes/%s/courses", institute.Hash()),
 					Doc:        course.Hash(),
