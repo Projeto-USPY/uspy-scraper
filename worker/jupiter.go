@@ -1,4 +1,4 @@
-package collector
+package worker
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 
 func CollectJupiter(
 	ctx context.Context,
-	DB db.Env,
+	DB db.Database,
 	queryParams map[string][]string,
-	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
+	afterCallback func(context.Context, db.Database) func(context.Context, processor.Processed) error,
 ) {
 	scraper := courses.NewJupiterScraper(parseInstitutesFromQuery(queryParams), parseSkipInstitutesFromQuery(queryParams))
 	processor.NewProcessor(
@@ -36,7 +36,7 @@ func CollectJupiter(
 	).Run()
 }
 
-func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(context.Context, processor.Processed) error {
+func setSubjectData(ctx context.Context, DB db.Database, excludeStats bool) func(context.Context, processor.Processed) error {
 	return func(_ context.Context, results processor.Processed) error {
 		objects := make([]db.BatchObject, 0)
 
@@ -79,10 +79,10 @@ func setSubjectData(ctx context.Context, DB db.Env, excludeStats bool) func(cont
 	}
 }
 
-func BuildSubjectData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
+func BuildSubjectData(ctx context.Context, DB db.Database) func(_ context.Context, results processor.Processed) error {
 	return setSubjectData(ctx, DB, false)
 }
 
-func UpdateSubjectData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
+func UpdateSubjectData(ctx context.Context, DB db.Database) func(_ context.Context, results processor.Processed) error {
 	return setSubjectData(ctx, DB, true)
 }

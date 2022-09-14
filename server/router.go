@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var env db.Env
+var env db.Database
 
 func init() {
 	config.Setup()
