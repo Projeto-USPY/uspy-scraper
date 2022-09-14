@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go/firestore v1.5.0
-	github.com/Projeto-USPY/uspy-backend v1.2.2-0.20220122010730-4e1dfed68271
+	github.com/Projeto-USPY/uspy-backend v1.2.2-0.20220914185202-b7530887e494
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/json-iterator/go v1.1.12 // indirect

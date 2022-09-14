@@ -1,4 +1,4 @@
-package collector
+package worker
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 
 func CollectOfferings(
 	ctx context.Context,
-	DB db.Env,
+	DB db.Database,
 	queryParams map[string][]string,
-	afterCallback func(context.Context, db.Env) func(context.Context, processor.Processed) error,
+	afterCallback func(context.Context, db.Database) func(context.Context, processor.Processed) error,
 ) {
 	scraper := offerings.NewOfferingsScraper(parseInstitutesFromQuery(queryParams), parseSkipInstitutesFromQuery(queryParams))
 	processor.NewProcessor(
@@ -35,7 +35,7 @@ func CollectOfferings(
 
 func queryProcessor(
 	ctx context.Context,
-	DB db.Env,
+	DB db.Database,
 	off models.Offering,
 ) func(context.Context) (processor.Processed, error) {
 	return func(context.Context) (processor.Processed, error) {
@@ -58,7 +58,7 @@ func queryProcessor(
 	}
 }
 
-func setOfferingsData(ctx context.Context, DB db.Env) func(_ context.Context, results processor.Processed) error {
+func setOfferingsData(ctx context.Context, DB db.Database) func(_ context.Context, results processor.Processed) error {
 	return func(_ context.Context, results processor.Processed) error {
 		objects := make([]db.BatchObject, 0)
 		queryTasks := make([]*processor.Task, 0)
@@ -97,10 +97,10 @@ func setOfferingsData(ctx context.Context, DB db.Env) func(_ context.Context, re
 	}
 }
 
-func BuildOfferingsData(ctx context.Context, DB db.Env) func(context.Context, processor.Processed) error {
+func BuildOfferingsData(ctx context.Context, DB db.Database) func(context.Context, processor.Processed) error {
 	return setOfferingsData(ctx, DB)
 }
 
-func UpdateOfferingsData(ctx context.Context, DB db.Env) func(context.Context, processor.Processed) error {
+func UpdateOfferingsData(ctx context.Context, DB db.Database) func(context.Context, processor.Processed) error {
 	return setOfferingsData(ctx, DB)
 }

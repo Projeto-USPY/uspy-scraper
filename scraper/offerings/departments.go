@@ -27,8 +27,8 @@ type fallbackDepartmentsList []struct {
 	Department json.Number `json:"codigoSetor"`
 }
 
-func (d DepartmentsList) Insert(_ db.Env, _ string) error { return nil }
-func (d DepartmentsList) Update(_ db.Env, _ string) error { return nil }
+func (d DepartmentsList) Insert(_ db.Database, _ string) error { return nil }
+func (d DepartmentsList) Update(_ db.Database, _ string) error { return nil }
 
 type DepartmentsScraper struct {
 	DepartmentsURLMask string

@@ -1,4 +1,4 @@
-package collector
+package worker
 
 import (
 	"context"
@@ -15,25 +15,25 @@ func buildQueryParams(institute string) map[string][]string {
 
 func BenchmarkCollectJupiter(b *testing.B) {
 	ctx := context.Background()
-	CollectJupiter(ctx, db.Env{}, map[string][]string{}, Noop)
+	CollectJupiter(ctx, db.Database{}, map[string][]string{}, Noop)
 }
 
 func BenchmarkCollectICMCSubjects(b *testing.B) {
 	ctx := context.Background()
-	CollectJupiter(ctx, db.Env{}, buildQueryParams("55"), Noop)
+	CollectJupiter(ctx, db.Database{}, buildQueryParams("55"), Noop)
 }
 
 func BenchmarkCollectICMCOfferings(b *testing.B) {
 	ctx := context.Background()
-	CollectOfferings(ctx, db.Env{}, buildQueryParams("55"), Noop)
+	CollectOfferings(ctx, db.Database{}, buildQueryParams("55"), Noop)
 }
 
 func BenchmarkCollectPoliSubjects(b *testing.B) {
 	ctx := context.Background()
-	CollectJupiter(ctx, db.Env{}, buildQueryParams("3"), Noop)
+	CollectJupiter(ctx, db.Database{}, buildQueryParams("3"), Noop)
 }
 
 func BenchmarkCollectPoliOfferings(b *testing.B) {
 	ctx := context.Background()
-	CollectOfferings(ctx, db.Env{}, buildQueryParams("3"), Noop)
+	CollectOfferings(ctx, db.Database{}, buildQueryParams("3"), Noop)
 }

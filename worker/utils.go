@@ -1,4 +1,4 @@
-package collector
+package worker
 
 import "strings"
 
