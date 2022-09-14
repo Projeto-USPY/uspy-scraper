@@ -25,6 +25,13 @@ func Noop() func(*gin.Context) {
 	}
 }
 
+func SyncStats(
+	env db.Database,
+) func(*gin.Context) {
+	return func(ctx *gin.Context) {
+		worker.SyncStats(ctx, env)
+	}
+}
 
 func Update(
 	env db.Database,

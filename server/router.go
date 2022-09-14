@@ -18,6 +18,7 @@ func setupRoutes(router *gin.Engine) {
 	router.POST("/update", callbacks.Update(env))
 	router.POST("/build", callbacks.Build(env))
 	router.POST("/noop", callbacks.Noop())
+	router.POST("/sync/stats", callbacks.SyncStats(env))
 }
 
 func InitRouter() {
