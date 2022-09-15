@@ -75,7 +75,14 @@ func setSubjectData(ctx context.Context, DB db.Database, excludeStats bool) func
 
 		DB.Ctx = ctx // super hacky, but it works for now
 		log.Infof("batch writing subject objects, total: %d", len(objects))
-		return DB.BatchWrite(objects)
+		err := DB.BatchWrite(objects)
+
+		if !excludeStats {
+			log.Info("resyncing stats from subject reviews")
+			SyncSubjectReviews(ctx, DB)
+		}
+
+		return err
 	}
 }
 

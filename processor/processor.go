@@ -144,6 +144,10 @@ func (proc *Processor) Run() (results []Processed) {
 				case <-ctx.Done():
 					return
 				case job := <-proc.jobs:
+					if job == nil {
+						continue
+					}
+
 					log := log.WithFields(job.IDs)
 					log.Debug("starting job")
 

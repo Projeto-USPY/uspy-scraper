@@ -2,6 +2,7 @@ package callbacks
 
 import (
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -33,6 +34,14 @@ func SyncStats(
 	}
 }
 
+func SyncSubjectReviews(
+	env db.Database,
+) func(*gin.Context) {
+	return func(ctx *gin.Context) {
+		worker.SyncSubjectReviews(ctx, env)
+	}
+}
+
 func Update(
 	env db.Database,
 ) func(*gin.Context) {
@@ -56,11 +65,28 @@ func Build(
 	return func(ctx *gin.Context) {
 		queryParams := ctx.Request.URL.Query()
 
-		log.WithField("params", queryParams).Info("running jupiter collector")
-		worker.CollectJupiter(ctx, env, queryParams, worker.BuildSubjectData)
+		tasksQuery := queryParams.Get("tasks")
 
-		log.WithField("params", queryParams).Info("running offerings collector")
-		worker.CollectOfferings(ctx, env, queryParams, worker.BuildOfferingsData)
+		if len(tasksQuery) > 0 {
+			tasks := strings.Split(tasksQuery, ",")
+			for _, t := range tasks {
+				switch t {
+				case "jupiter":
+					log.WithField("params", queryParams).Info("running jupiter collector")
+					worker.CollectJupiter(ctx, env, queryParams, worker.BuildSubjectData)
+				case "offerings":
+					log.WithField("params", queryParams).Info("running offerings collector")
+					worker.CollectOfferings(ctx, env, queryParams, worker.BuildOfferingsData)
+
+				}
+			}
+		} else {
+			log.WithField("params", queryParams).Info("running jupiter collector")
+			worker.CollectJupiter(ctx, env, queryParams, worker.BuildSubjectData)
+
+			log.WithField("params", queryParams).Info("running offerings collector")
+			worker.CollectOfferings(ctx, env, queryParams, worker.BuildOfferingsData)
+		}
 
 		log.Info("done")
 		ctx.Status(http.StatusOK)

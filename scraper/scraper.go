@@ -12,6 +12,16 @@ import (
 
 const DefaultJupiterURLMask = "https://uspdigital.usp.br/jupiterweb/jupColegiadoLista?tipo=D"
 
+var client *http.Client
+
+func init() {
+	if client == nil {
+		client = &http.Client{
+			Timeout: 0,
+		}
+	}
+}
+
 func GetAllInstitutes() ([]string, error) {
 	resp, reader, err := Fetch(DefaultJupiterURLMask, http.MethodGet, nil, nil, true)
 	if err != nil {
@@ -37,10 +47,6 @@ func GetAllInstitutes() ([]string, error) {
 }
 
 func Fetch(startURL string, method string, body io.Reader, headers map[string]string, infereContentType bool) (*http.Response, io.Reader, error) {
-	client := &http.Client{
-		Timeout: 0,
-	}
-
 	resp, reader, err := utils.MakeRequestWithUTF8(client, startURL, method, body, headers, infereContentType)
 
 	if err != nil {
