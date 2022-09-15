@@ -62,8 +62,15 @@ func (sc *InstituteScraper) Process(ctx context.Context) func(context.Context) (
 			return nil, err
 		}
 
+		instituteNameSelector := doc.Find("span > b")
+		if instituteNameSelector.Length() == 0 {
+			// could not find institute name
+			log.Warn("could not find any coursework in insttute")
+			return nil, errors.New("can't scrape institute, for some reason there's no name or no coursework available")
+		}
+
 		institute := models.Institute{
-			Name:    strings.TrimSpace(doc.Find("span > b").Text()),
+			Name:    strings.TrimSpace(instituteNameSelector.Text()),
 			Code:    sc.Code,
 			Courses: make([]models.Course, 0, 50),
 		}
