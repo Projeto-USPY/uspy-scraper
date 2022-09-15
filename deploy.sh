@@ -3,7 +3,7 @@
 GREEN='\e[1;32m'
 NC='\e[0m' # No Color
 
-MASTER_BRANCH=master
+MASTER_BRANCH=main
 DEV_BRANCH=dev
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
