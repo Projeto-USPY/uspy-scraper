@@ -64,7 +64,8 @@ func setOfferingsData(ctx context.Context, DB db.Database) func(_ context.Contex
 		queryTasks := make([]*processor.Task, 0)
 
 		for _, institute := range results.([]processor.Processed) {
-			for _, p := range institute.(models.Institute).Professors {
+			institute := institute.(models.Institute)
+			for _, p := range institute.Professors {
 				for _, off := range p.Offerings {
 					queryTasks = append(queryTasks, processor.NewTask(
 						log.Fields{
