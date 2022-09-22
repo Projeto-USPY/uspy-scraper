@@ -48,11 +48,33 @@ func Update(
 	return func(ctx *gin.Context) {
 		queryParams := ctx.Request.URL.Query()
 
-		log.WithField("params", queryParams).Info("running jupiter collector")
-		worker.CollectJupiter(ctx, env, queryParams, worker.UpdateSubjectData)
+		tasksQuery := queryParams.Get("tasks")
 
-		log.WithField("params", queryParams).Info("running offerings collector")
-		worker.CollectOfferings(ctx, env, queryParams, worker.UpdateOfferingsData)
+		if len(tasksQuery) > 0 {
+			tasks := strings.Split(tasksQuery, ",")
+			for _, t := range tasks {
+				switch t {
+				case "jupiter":
+					log.WithField("params", queryParams).Info("running jupiter collector")
+					worker.CollectJupiter(ctx, env, queryParams, worker.UpdateSubjectData)
+				case "offerings":
+					log.WithField("params", queryParams).Info("running offerings collector")
+					worker.CollectOfferings(ctx, env, queryParams, worker.UpdateOfferingsData)
+				case "professors":
+					log.WithField("params", queryParams).Info("running professors collector")
+					worker.CollectProfessors(ctx, env, queryParams, worker.UpdateProfessorData)
+				}
+			}
+		} else {
+			log.WithField("params", queryParams).Info("running jupiter collector")
+			worker.CollectJupiter(ctx, env, queryParams, worker.UpdateSubjectData)
+
+			log.WithField("params", queryParams).Info("running offerings collector")
+			worker.CollectOfferings(ctx, env, queryParams, worker.UpdateOfferingsData)
+
+			log.WithField("params", queryParams).Info("running professors collector")
+			worker.CollectProfessors(ctx, env, queryParams, worker.UpdateOfferingsData)
+		}
 
 		log.Info("done")
 		ctx.Status(http.StatusOK)
@@ -77,7 +99,9 @@ func Build(
 				case "offerings":
 					log.WithField("params", queryParams).Info("running offerings collector")
 					worker.CollectOfferings(ctx, env, queryParams, worker.BuildOfferingsData)
-
+				case "professors":
+					log.WithField("params", queryParams).Info("running professors collector")
+					worker.CollectProfessors(ctx, env, queryParams, worker.BuildProfessorData)
 				}
 			}
 		} else {
@@ -86,6 +110,9 @@ func Build(
 
 			log.WithField("params", queryParams).Info("running offerings collector")
 			worker.CollectOfferings(ctx, env, queryParams, worker.BuildOfferingsData)
+
+			log.WithField("params", queryParams).Info("running professors collector")
+			worker.CollectProfessors(ctx, env, queryParams, worker.BuildOfferingsData)
 		}
 
 		log.Info("done")
