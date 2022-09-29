@@ -148,7 +148,7 @@ func getTotalHours(search *goquery.Selection) (string, error) {
 	return total, nil
 }
 
-func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool) func(context.Context) (processor.Processed, error) {
+func (sc *SubjectScraper) Process(courseName string, period, rows *goquery.Selection, optional bool) func(context.Context) (processor.Processed, error) {
 	return func(context.Context) (processor.Processed, error) {
 		resp, reader, err := scraper.Fetch(sc.URL, http.MethodGet, nil, nil, true)
 		if err != nil {
@@ -186,6 +186,7 @@ func (sc *SubjectScraper) Process(period, rows *goquery.Selection, optional bool
 		subject := models.Subject{
 			Code:           sc.Code,
 			CourseCode:     course,
+			CourseName:     courseName,
 			Specialization: specialization,
 			Name:           name,
 			Stats: map[string]int{

@@ -103,7 +103,7 @@ func (cs *CourseScraper) Process() func(context.Context) (processor.Processed, e
 							"subject": subjectURL,
 						},
 						processor.QuadraticDelay,
-						subjectScraper.Process(period, rows, optional),
+						subjectScraper.Process(course.Name, period, rows, optional),
 						nil,
 					))
 				}
