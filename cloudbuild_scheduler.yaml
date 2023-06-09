@@ -1,0 +1,44 @@
+steps:
+  # Build the container image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "--tag",
+        "gcr.io/$_PROJECT_ID/uspy-scraper:$COMMIT_SHA:scheduler",
+        "-f",
+        "./scheduler.Dockerfile",
+      ]
+    dir: .
+
+  # Push the container image to Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$_PROJECT_ID/uspy-scraper:$COMMIT_SHA:scheduler"]
+
+  # Deploy image to Cloud Run
+  - name: "gcr.io/cloud-builders/gcloud"
+    args: [
+        "run",
+        "deploy",
+        "uspy-scraper-scheduler",
+        "--image=gcr.io/$_PROJECT_ID/uspy-scraper:$COMMIT_SHA:scheduler",
+        "--region=us-east1",
+        "--platform=managed",
+        "--max-instances=30",
+        "--memory=2048Mi",
+        "--set-env-vars=\
+        WORKER_ENDPOINT=$_WORKER_ENDPOINT",
+      ]
+
+  # Assign 100% of the traffic to the latest version
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      [
+        "run",
+        "services",
+        "update-traffic",
+        "uspy-scraper-scheduler",
+        "--region=us-east1",
+        "--platform=managed",
+        "--to-latest",
+      ]
