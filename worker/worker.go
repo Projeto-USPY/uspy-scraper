@@ -31,7 +31,7 @@ func SyncStats(
 
 		snaps, err := action()
 		if err != nil {
-			log.Error("could not perform %s query in sync stats: %s", category, err.Error())
+			log.Errorf("could not perform %s query in sync stats: %s", category, err.Error())
 		}
 
 		statsChan <- &models.StatsEntry{
