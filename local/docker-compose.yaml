@@ -2,7 +2,7 @@ version: "3.5"
 services:
   firestore_emulator:
     build:
-      context: ./docker/emulator
+      context: ./emulator
       dockerfile: ./Dockerfile
     environment:
       - FIRESTORE_PROJECT_ID=dummy-project-id
@@ -15,7 +15,7 @@ services:
   uspy-scraper:
     build: 
       context: .
-      dockerfile: ./docker/app/Dockerfile
+      dockerfile: ./app/Dockerfile
     ports: 
       - "8300:8300"
     environment:
