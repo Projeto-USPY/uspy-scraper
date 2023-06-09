@@ -26,7 +26,7 @@ steps:
         "--region=us-east1",
         "--platform=managed",
         "--max-instances=1",
-        "--timeout=15m",
+        "--timeout=20m",
         "--memory=2048Mi",
         "--service-account=$_SERVICE_ACCOUNT",
         "--set-env-vars=\
