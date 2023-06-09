@@ -105,10 +105,12 @@ func schedule(w http.ResponseWriter, r *http.Request) {
 	for _, inst := range instituteCodes {
 		url := workerEndpoint + "/update?institute=" + inst
 		log.Info("Sending request to ", url)
-		_, err := client.Post(url, "application/json", nil)
+		resp, err := client.Post(url, "application/json", nil)
 		if err != nil {
 			log.Error("Error while sending request to ", url)
 		}
+
+		log.Info("Request to ", url, " returned status code ", resp.StatusCode)
 	}
 }
 
