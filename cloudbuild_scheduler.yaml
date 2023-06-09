@@ -25,7 +25,7 @@ steps:
         "--image=gcr.io/$_PROJECT_ID/uspy-scraper-scheduler:$COMMIT_SHA",
         "--region=us-east1",
         "--platform=managed",
-        "--max-instances=30",
+        "--max-instances=5",
         "--memory=2048Mi",
         "--set-env-vars=\
         WORKER_ENDPOINT=$_WORKER_ENDPOINT",
