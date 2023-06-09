@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/idtoken"
 )
 
 var instituteCodes = []string{
@@ -59,6 +61,7 @@ var instituteCodes = []string{
 }
 
 var workerEndpoint string
+var client *http.Client = http.DefaultClient
 
 func init() {
 	if level, ok := os.LookupEnv("LOG_LEVEL"); ok {
@@ -84,6 +87,17 @@ func init() {
 		ForceColors:  true,
 		PadLevelText: true,
 	})
+
+	ctx := context.Background()
+	gcpClient, err := idtoken.NewClient(ctx, workerEndpoint)
+
+	if err != nil {
+		log.Warnf("using default client, failed to fetch ID token necessary for scheduler to comm with worker: %s", err.Error())
+	} else {
+		log.Info("successfully fetched ID token")
+		client = gcpClient
+	}
+
 }
 
 func schedule(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +110,7 @@ func schedule(w http.ResponseWriter, r *http.Request) {
 		go func(url string) {
 			defer wg.Done()
 			log.Info("Sending request to ", url)
-			_, err := http.Post(url, "application/json", nil)
+			_, err := client.Post(url, "application/json", nil)
 			if err != nil {
 				log.Error("Error while sending request to ", url)
 			}
