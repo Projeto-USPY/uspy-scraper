@@ -5,7 +5,7 @@ steps:
       [
         "build",
         "--tag",
-        "gcr.io/$_PROJECT_ID/uspy-scraper:$COMMIT_SHA:worker",
+        "gcr.io/$_PROJECT_ID/uspy-scraper-worker:$COMMIT_SHA",
         "-f",
         "./worker.Dockerfile",
       ]
@@ -13,7 +13,7 @@ steps:
 
   # Push the container image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
-    args: ["push", "gcr.io/$_PROJECT_ID/uspy-scraper:$COMMIT_SHA:worker"]
+    args: ["push", "gcr.io/$_PROJECT_ID/uspy-scraper-worker:$COMMIT_SHA"]
 
   # Deploy image to Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
@@ -21,7 +21,7 @@ steps:
         "run",
         "deploy",
         "uspy-scraper-worker",
-        "--image=gcr.io/$_PROJECT_ID/uspy-scraper:$COMMIT_SHA:worker",
+        "--image=gcr.io/$_PROJECT_ID/uspy-scraper-worker:$COMMIT_SHA",
         "--region=us-east1",
         "--platform=managed",
         "--max-instances=30",
