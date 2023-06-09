@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/idtoken"
@@ -102,22 +101,15 @@ func init() {
 
 func schedule(w http.ResponseWriter, r *http.Request) {
 	// run a single request for each institute in a goroutine
-	var wg sync.WaitGroup
-	wg.Add(len(instituteCodes))
 
 	for _, inst := range instituteCodes {
 		url := workerEndpoint + "/update?institute=" + inst
-		go func(url string) {
-			defer wg.Done()
-			log.Info("Sending request to ", url)
-			_, err := client.Post(url, "application/json", nil)
-			if err != nil {
-				log.Error("Error while sending request to ", url)
-			}
-		}(url)
+		log.Info("Sending request to ", url)
+		_, err := client.Post(url, "application/json", nil)
+		if err != nil {
+			log.Error("Error while sending request to ", url)
+		}
 	}
-
-	wg.Wait()
 }
 
 func main() {
