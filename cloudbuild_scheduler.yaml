@@ -8,6 +8,7 @@ steps:
         "gcr.io/$_PROJECT_ID/uspy-scraper-scheduler:$COMMIT_SHA",
         "-f",
         "./scheduler.Dockerfile",
+        ".",
       ]
     dir: .
 
