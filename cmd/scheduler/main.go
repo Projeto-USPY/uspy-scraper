@@ -109,7 +109,12 @@ func schedule(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/schedule", schedule)
 
-	if err := http.ListenAndServe(":80", nil); err != nil {
+	port := "8080"
+	if envPort, ok := os.LookupEnv("PORT"); ok {
+		port = envPort
+	}
+
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			log.Info("Server closed")
 			return
