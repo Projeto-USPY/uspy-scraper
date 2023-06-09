@@ -27,6 +27,7 @@ steps:
         "--platform=managed",
         "--max-instances=5",
         "--memory=2048Mi",
+        "--service-account=$_SERVICE_ACCOUNT",
         "--set-env-vars=\
         WORKER_ENDPOINT=$_WORKER_ENDPOINT",
       ]
