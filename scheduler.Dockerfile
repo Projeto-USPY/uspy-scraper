@@ -16,7 +16,7 @@ RUN go mod download
 COPY . ./
 
 # Build the binary.
-RUN go build -v -o service ./main.go
+RUN go build -v -o service ./cmd/scheduler/main.go
 
 # Run the web service on container startup.
 CMD ["/app/service"]
